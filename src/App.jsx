@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { loadShared, saveShared, subscribeToKey } from "./storage";
 
 // ─── MATCHES (odds-based points from BetOnline.ag) ───────────────────────────
@@ -204,11 +204,6 @@ export default function WM42() {
   const [lastRefresh,setLastRefresh] = useState(null);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPass,     setAdminPass]     = useState("");
-  const [adminPicks,    setAdminPicks]    = useState({});
-  const [adminOu,       setAdminOu]       = useState({});
-  const [adminWc,       setAdminWc]       = useState({});
-  const [adminTheo,     setAdminTheo]     = useState({});
-  const [adminSaved,    setAdminSaved]    = useState(false);
   const [editKey,       setEditKey]       = useState("");
 
   const fetchBoard = useCallback(async (triggerAI=false) => {
@@ -222,10 +217,6 @@ export default function WM42() {
     setLastRefresh(new Date());
     setLoading(false);
   }, []);
-
-  useEffect(() => {
-    if (results) { setAdminPicks(results.picks||{}); setAdminOu(results.overUnders||{}); setAdminWc(results.wildCards||{}); setAdminTheo(results.theories||{}); }
-  }, [results]);
 
   useEffect(() => {
     if (tab==="board") {
@@ -259,18 +250,22 @@ export default function WM42() {
     if (ok) setStep(STEPS); else alert("Save failed — try again.");
   }
 
-  async function handleSaveAdmin() {
+  async function adminSave(overrides) {
     const merged = {
       ...(results||{}),
-      picks:      { ...(results?.picks||{}),      ...adminPicks },
-      overUnders: { ...(results?.overUnders||{}), ...adminOu   },
-      wildCards:  { ...(results?.wildCards||{}),  ...adminWc   },
-      theories:   adminTheo,
+      picks:      { ...(results?.picks||{}),      ...(overrides.picks||{}) },
+      overUnders: { ...(results?.overUnders||{}), ...(overrides.overUnders||{}) },
+      wildCards:  { ...(results?.wildCards||{}),  ...(overrides.wildCards||{}) },
+      theories:   overrides.theories !== undefined ? overrides.theories : (results?.theories||{}),
       gameOver:   results?.gameOver||false,
-      lastUpdated:"Admin override",
+      lastUpdated:"Admin",
     };
+    // Clean out null picks (toggled off)
+    Object.keys(merged.picks).forEach(k => { if (merged.picks[k] === null) delete merged.picks[k]; });
+    Object.keys(merged.overUnders).forEach(k => { if (merged.overUnders[k] === null) delete merged.overUnders[k]; });
+    Object.keys(merged.wildCards).forEach(k => { if (merged.wildCards[k] === null) delete merged.wildCards[k]; });
     const ok = await saveShared(RESULTS_KEY, merged);
-    if (ok) { setAdminSaved(true); setResults(merged); }
+    if (ok) setResults(merged);
   }
 
   async function handleMarkDone() {
@@ -333,7 +328,7 @@ export default function WM42() {
         <div style={{ maxWidth:620, margin:"0 auto" }}>
           {tab==="pick"  && renderPick()}
           {tab==="board" && <BoardTab subs={subs} results={results} loading={loading} lastRefresh={lastRefresh} onRefresh={()=>fetchBoard()} />}
-          {tab==="admin" && <AdminTab unlocked={adminUnlocked} setUnlocked={setAdminUnlocked} pass={adminPass} setPass={setAdminPass} adminPicks={adminPicks} setAdminPicks={setAdminPicks} adminOu={adminOu} setAdminOu={setAdminOu} adminWc={adminWc} setAdminWc={setAdminWc} adminTheo={adminTheo} setAdminTheo={setAdminTheo} onSave={handleSaveAdmin} onMarkDone={handleMarkDone} onClear={handleClearAll} saved={adminSaved} setSaved={setAdminSaved} results={results} subs={subs} />}
+          {tab==="admin" && <AdminTab unlocked={adminUnlocked} setUnlocked={setAdminUnlocked} pass={adminPass} setPass={setAdminPass} onUpdate={adminSave} onMarkDone={handleMarkDone} onClear={handleClearAll} results={results} subs={subs} />}
         </div>
       </div>
     </div>
@@ -885,11 +880,11 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
 }
 
 // ─── ADMIN TAB ───────────────────────────────────────────────────────────────
-function AdminTab({ unlocked, setUnlocked, pass, setPass, adminPicks, setAdminPicks, adminOu, setAdminOu, adminWc, setAdminWc, adminTheo, setAdminTheo, onSave, onMarkDone, onClear, saved, setSaved, results, subs }) {
+function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, onClear, results, subs }) {
   if (!unlocked) return (
     <div style={{ textAlign:"center", paddingTop:32 }}>
       <div style={{ fontSize:36, marginBottom:8 }}>🔐</div>
-      <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:18 }}>Admin Override</h2>
+      <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:18 }}>Admin Panel</h2>
       <p style={{ color:"#5a5040", fontSize:11, marginBottom:18, lineHeight:1.5 }}>Enter match results, wild card outcomes, and theory results live.<br/>Mark the show done to reveal the winner.</p>
       <input type="password" style={{ ...S.input, maxWidth:240, textAlign:"center", margin:"0 auto 14px", display:"block" }} placeholder="Password…" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&(pass===ADMIN_PASS?setUnlocked(true):alert("Wrong password"))} />
       <button style={S.btn(GOLD,!pass)} disabled={!pass} onClick={()=>pass===ADMIN_PASS?setUnlocked(true):alert("Wrong password")}>Unlock</button>
@@ -897,7 +892,31 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, adminPicks, setAdminPi
     </div>
   );
 
-  const p = (fn) => { setSaved(false); fn(); };
+  const curPicks = results?.picks || {};
+  const curWc    = results?.wildCards || {};
+  const curTheo  = results?.theories || {};
+
+  function togglePick(matchId, name) {
+    const val = curPicks[matchId] === name ? null : name;
+    onUpdate({ picks: { [matchId]: val } });
+  }
+  function toggleWc(wcId, opt) {
+    const val = curWc[wcId] === opt ? null : opt;
+    onUpdate({ wildCards: { [wcId]: val } });
+  }
+  function toggleTheo(theoId, opt) {
+    const val = curTheo[theoId] === opt ? null : opt;
+    onUpdate({ theories: { ...curTheo, [theoId]: val } });
+  }
+  const surpriseTimer = useRef(null);
+  function updateSurprise(theoId, index, value) {
+    const updated = [...(curTheo[theoId] || Array(SURPRISE_SLOTS).fill(""))];
+    updated[index] = value;
+    const newTheo = { ...curTheo, [theoId]: updated };
+    // Debounce text input saves
+    clearTimeout(surpriseTimer.current);
+    surpriseTimer.current = setTimeout(() => onUpdate({ theories: newTheo }), 500);
+  }
 
   return (
     <div>
@@ -914,19 +933,42 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, adminPicks, setAdminPi
         )}
       </div>
 
+      {/* Match Winners */}
+      <div style={S.card}>
+        <div style={S.lbl}>Match Winners</div>
+        <div style={{ fontSize:10, color:"#4a4040", marginBottom:12 }}>Tap to select · tap again to deselect · saves instantly</div>
+        {matches.map(m=>(
+          <div key={m.id} style={{ marginBottom:12 }}>
+            <div style={{ fontSize:9, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:5 }}>{m.title}</div>
+            <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+              {m.competitors.map(c=>{
+                const sel = curPicks[m.id]===c.name;
+                return (
+                  <button key={c.name} onClick={()=>togglePick(m.id,c.name)} style={{ flex:1, minWidth:70, background:sel?`${GREEN}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GREEN}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"6px 8px", color:sel?"#6aff6a":"#4a4040", cursor:"pointer", fontSize:10, fontFamily:"Georgia, serif" }}>
+                    {c.name}{sel&&" ✓"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Wild Cards */}
       <div style={S.card}>
         <div style={S.lbl}>Wild Card Results</div>
-        <div style={{ fontSize:10, color:"#4a4040", marginBottom:12 }}>Enter actual outcomes after the show</div>
         {wildCards.map(w=>(
           <div key={w.id} style={{ marginBottom:14 }}>
-            <div style={{ fontSize:11, color:"#d0c4a8", marginBottom:6 }}>{w.label} <span style={{ color:GOLD, fontSize:9 }}>· {WC_PTS}pts</span></div>
+            <div style={{ fontSize:11, color:"#d0c4a8", marginBottom:6 }}>{w.label}</div>
             <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-              {w.options.map(opt=>(
-                <button key={opt} onClick={()=>p(()=>setAdminWc(v=>({...v,[w.id]:opt})))} style={{ flex:1, minWidth:80, background:adminWc[w.id]===opt?`${GOLD}22`:"rgba(255,255,255,0.02)", border:adminWc[w.id]===opt?`1px solid ${GOLD}`:`1px solid ${BORDER}`, borderRadius:4, padding:"7px 8px", color:adminWc[w.id]===opt?"#f0e6d3":"#4a4040", cursor:"pointer", fontSize:11, fontFamily:"Georgia, serif" }}>
-                  {opt}{adminWc[w.id]===opt&&" ✓"}
-                </button>
-              ))}
+              {w.options.map(opt=>{
+                const sel = curWc[w.id]===opt;
+                return (
+                  <button key={opt} onClick={()=>toggleWc(w.id,opt)} style={{ flex:1, minWidth:80, background:sel?`${GREEN}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GREEN}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"7px 8px", color:sel?"#6aff6a":"#4a4040", cursor:"pointer", fontSize:11, fontFamily:"Georgia, serif" }}>
+                    {opt}{sel&&" ✓"}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -939,60 +981,41 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, adminPicks, setAdminPi
           if (t.consensus) return (
             <div key={t.id} style={{ marginBottom:12, background:`${GOLD}08`, border:`1px solid ${GOLD}20`, borderRadius:6, padding:"9px 12px" }}>
               <div style={{ fontSize:10, color:GOLD, marginBottom:2 }}>{t.label}</div>
-              <div style={{ fontSize:10, color:"#5a5040" }}>🤖 Auto-scored from consensus — no input needed</div>
+              <div style={{ fontSize:10, color:"#5a5040" }}>Auto-scored from group consensus — no input needed</div>
             </div>
           );
           if (t.type==="surprises") return (
             <div key={t.id} style={{ marginBottom:12 }}>
               <div style={{ fontSize:11, color:"#d0c4a8", marginBottom:6 }}>Confirmed Surprise Appearances <span style={{ color:PURPLE, fontSize:9 }}>· ±{SURPRISE_PTS}pts each</span></div>
               {Array.from({ length: SURPRISE_SLOTS }).map((_, i) => {
-                const vals = adminTheo[t.id] || [];
+                const vals = curTheo[t.id] || [];
                 return (
-                  <input key={i} style={{ ...S.input, marginBottom:6 }} placeholder={`Surprise #${i+1}`} value={vals[i] || ""} onChange={e => p(() => {
-                    const updated = [...(adminTheo[t.id] || Array(SURPRISE_SLOTS).fill(""))];
-                    updated[i] = e.target.value;
-                    setAdminTheo(v => ({ ...v, [t.id]: updated }));
-                  })} />
+                  <input key={i} style={{ ...S.input, marginBottom:6 }} placeholder={`Surprise #${i+1}`} value={vals[i] || ""} onChange={e => updateSurprise(t.id, i, e.target.value)} />
                 );
               })}
-              <div style={{ fontSize:9, color:"#3a3030", marginTop:3 }}>Case-insensitive match against each player's guesses</div>
+              <div style={{ fontSize:9, color:"#3a3030", marginTop:3 }}>Case-insensitive match · auto-saves after typing</div>
             </div>
           );
           return (
             <div key={t.id} style={{ marginBottom:12 }}>
               <div style={{ fontSize:11, color:"#d0c4a8", marginBottom:6 }}>{t.label} <span style={{ color:GOLD, fontSize:9 }}>· {t.pts}pts</span></div>
               <div style={{ display:"flex", gap:6 }}>
-                {t.options.map(opt=>(
-                  <button key={opt} onClick={()=>p(()=>setAdminTheo(v=>({...v,[t.id]:opt})))} style={{ flex:1, background:adminTheo[t.id]===opt?`${GOLD}22`:"rgba(255,255,255,0.02)", border:adminTheo[t.id]===opt?`1px solid ${GOLD}`:`1px solid ${BORDER}`, borderRadius:4, padding:"7px 10px", color:adminTheo[t.id]===opt?"#f0e6d3":"#4a4040", cursor:"pointer", fontSize:11, fontFamily:"Georgia, serif" }}>
-                    {opt}{adminTheo[t.id]===opt&&" ✓"}
-                  </button>
-                ))}
+                {t.options.map(opt=>{
+                  const sel = curTheo[t.id]===opt;
+                  return (
+                    <button key={opt} onClick={()=>toggleTheo(t.id,opt)} style={{ flex:1, background:sel?`${GREEN}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GREEN}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"7px 10px", color:sel?"#6aff6a":"#4a4040", cursor:"pointer", fontSize:11, fontFamily:"Georgia, serif" }}>
+                      {opt}{sel&&" ✓"}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Match override */}
-      <div style={S.card}>
-        <div style={S.lbl}>Match Winner Override (if AI is wrong)</div>
-        {matches.map(m=>(
-          <div key={m.id} style={{ marginBottom:12 }}>
-            <div style={{ fontSize:9, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:5 }}>{m.title}</div>
-            <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
-              {[...m.competitors,{name:"— Clear",pts:0}].map(c=>(
-                <button key={c.name} onClick={()=>p(()=>setAdminPicks(v=>({...v,[m.id]:c.name==="— Clear"?null:c.name})))} style={{ flex:1, minWidth:70, background:adminPicks[m.id]===c.name?`rgba(100,100,255,0.15)`:"rgba(255,255,255,0.02)", border:adminPicks[m.id]===c.name?`1px solid rgba(150,150,255,0.5)`:`1px solid ${BORDER}`, borderRadius:4, padding:"6px 8px", color:adminPicks[m.id]===c.name?"#f0e6d3":"#4a4040", cursor:"pointer", fontSize:10, fontFamily:"Georgia, serif" }}>
-                  {c.name}{adminPicks[m.id]===c.name&&" ✓"}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display:"flex", gap:10, marginTop:8, flexWrap:"wrap" }}>
-        <button style={{ ...S.btn(saved?"#3a8a3a":GOLD), flex:1 }} onClick={onSave}>{saved?"✓ Saved!":"Save All Overrides"}</button>
-        <button onClick={onClear} style={{ background:"transparent", border:`1px solid ${RED}50`, borderRadius:4, color:RED, cursor:"pointer", fontSize:11, padding:"10px 14px", fontFamily:"Georgia, serif" }}>Clear All</button>
+      <div style={{ marginTop:8 }}>
+        <button onClick={onClear} style={{ background:"transparent", border:`1px solid ${RED}50`, borderRadius:4, color:RED, cursor:"pointer", fontSize:11, padding:"10px 14px", fontFamily:"Georgia, serif" }}>Clear All Results</button>
       </div>
     </div>
   );
