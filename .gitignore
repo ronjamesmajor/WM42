@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+*.swp
+
+# Node
+node_modules/
+
+# Build
+dist/
