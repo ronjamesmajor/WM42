@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { loadShared, saveShared, subscribeToKey } from "./storage";
 
 // ─── MATCHES (odds-based points from BetOnline.ag) ───────────────────────────
@@ -103,7 +103,6 @@ const theories = [
 const PICKS_KEY    = "wm42_v4_picks";
 const RESULTS_KEY  = "wm42_v4_results";
 const ADMIN_PASS   = "vegaswm42";
-const AUTO_POLL_MS = 5 * 60 * 1000;
 // Lockout: 12:00 AM ET on Saturday April 18, 2026 (midnight before the show)
 const LOCKOUT_UTC  = new Date("2026-04-18T04:00:00Z");
 function isLocked() { return Date.now() >= LOCKOUT_UTC.getTime(); }
@@ -121,8 +120,6 @@ const GOLD2  = "#f0d060";
 const RED    = "#c0392b";
 const GREEN  = "#27ae60";
 const PURPLE = "#9b59b6";
-const BLUE   = "#2980b9";
-const ORANGE = "#e67e22";
 const BORDER = "rgba(255,255,255,0.07)";
 const BG     = "rgba(255,255,255,0.03)";
 const STEPS  = 7; // 0-name 1-night1 2-night2 3-o/u 4-wildcards 5-theories 6-review → 7=done
@@ -183,125 +180,6 @@ function calcScore(sub, results, allSubs=[]) {
   return s;
 }
 
-// ─── AI FETCHER ──────────────────────────────────────────────────────────────
-async function fetchResultsFromAI(existingResults) {
-  const matchList = matches.map(m =>
-    `- "${m.id}": ${m.title}${m.note?" ("+m.note+")":""} — ${m.competitors.map(c=>c.name).join(" vs ")}`
-  ).join("\n");
-
-  const picksTemplate = Object.fromEntries(matches.map(m => [m.id, null]));
-  const ouTemplate    = Object.fromEntries(overUnders.map(o => [o.id, null]));
-  const wcTemplate    = Object.fromEntries(wildCards.slice(0,2).map(w => [w.id, null]));
-
-  const ouList = overUnders.map(o =>
-    `- "${o.id}": ${o.label} — options: ${o.options.join(" | ")}`
-  ).join("\n");
-  const wcList = wildCards.slice(0,2).map(w =>
-    `- "${w.id}": ${w.label} — options: ${w.options.join(" | ")}`
-  ).join("\n");
-
-  const prompt = `You are a WWE results assistant. Search the web RIGHT NOW for confirmed WrestleMania 42 (April 18-19 2026) results.
-
-MATCHES:
-${matchList}
-
-OVER/UNDERS:
-${ouList}
-
-WILD CARDS (Yes/No):
-${wcList}
-
-RULES:
-1. Only fill in a winner if you find a confirmed result — not a prediction.
-2. Winner name must EXACTLY match one of the listed competitor names (copy it verbatim).
-3. For multi-person matches (ladder, fatal 4-way) the winner is a single competitor name.
-4. Use null for anything unconfirmed or not yet happened.
-5. Do not include markdown, code fences, or any text outside the JSON object.
-
-Respond with ONLY this JSON (fill in confirmed values, keep null for unknown):
-${JSON.stringify({ picks:picksTemplate, overUnders:ouTemplate, wildCards:wcTemplate, matchesComplete:false, lastUpdated:"status" }, null, 2)}`;
-
-  const resp = await fetch("https://api.anthropic.com/v1/messages", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      model:"claude-sonnet-4-20250514",
-      max_tokens:1200,
-      tools:[{ type:"web_search_20250305", name:"web_search" }],
-      messages:[{ role:"user", content:prompt }],
-    }),
-  });
-
-  if (!resp.ok) {
-    const errText = await resp.text().catch(()=>"");
-    throw new Error(`API ${resp.status}: ${errText.slice(0,120)}`);
-  }
-
-  const data = await resp.json();
-
-  const allText = (data.content||[])
-    .filter(b => b.type==="text")
-    .map(b => b.text)
-    .join("\n");
-
-  if (!allText) throw new Error("No text in API response");
-
-  let parsed;
-  const jsonMatch = allText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    return {
-      picks: {}, overUnders: {}, wildCards: existingResults?.wildCards || {},
-      theories: existingResults?.theories || {},
-      gameOver: existingResults?.gameOver || false,
-      matchesComplete: false,
-      lastUpdated: "⏳ Show hasn't started yet",
-      aiPowered: true,
-      fetchedAt: Date.now(),
-    };
-  }
-  try {
-    parsed = JSON.parse(jsonMatch[0]);
-  } catch(e) {
-    throw new Error(`JSON parse failed: ${e.message} — snippet: ${jsonMatch[0].slice(0,200)}`);
-  }
-
-  const sanitizedPicks = {};
-  matches.forEach(m => {
-    const val = parsed.picks?.[m.id];
-    if (val && val !== "null" && val !== null) {
-      const found = m.competitors.find(c => c.name.toLowerCase() === String(val).toLowerCase());
-      if (found) sanitizedPicks[m.id] = found.name;
-    }
-  });
-
-  const sanitizedOu = {};
-  overUnders.forEach(o => {
-    const val = parsed.overUnders?.[o.id];
-    if (val && val !== "null" && val !== null) {
-      const found = o.options.find(opt => opt.toLowerCase() === String(val).toLowerCase());
-      if (found) sanitizedOu[o.id] = found;
-    }
-  });
-
-  const sanitizedWc = {};
-  wildCards.slice(0,2).forEach(w => {
-    const val = parsed.wildCards?.[w.id];
-    if (val && ["Yes","No"].includes(val)) sanitizedWc[w.id] = val;
-  });
-
-  return {
-    picks: sanitizedPicks,
-    overUnders: sanitizedOu,
-    wildCards: { ...existingResults?.wildCards, ...sanitizedWc },
-    theories: existingResults?.theories || {},
-    gameOver: existingResults?.gameOver || false,
-    matchesComplete: !!parsed.matchesComplete,
-    lastUpdated: parsed.lastUpdated || "Updated",
-    aiPowered: true,
-    fetchedAt: Date.now(),
-  };
-}
-
 // ─── SHARED STYLES ───────────────────────────────────────────────────────────
 const S = {
   input: { width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.05)", border:`1px solid ${GOLD}40`, borderRadius:4, color:"#f0e6d3", fontSize:14, padding:"10px 14px", outline:"none", fontFamily:"Georgia, serif" },
@@ -323,7 +201,6 @@ export default function WM42() {
   const [subs,      setSubs]      = useState([]);
   const [results,   setResults]   = useState(null);
   const [loading,   setLoading]   = useState(false);
-  const [aiStatus,  setAiStatus]  = useState(null);
   const [lastRefresh,setLastRefresh] = useState(null);
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPass,     setAdminPass]     = useState("");
@@ -333,7 +210,6 @@ export default function WM42() {
   const [adminTheo,     setAdminTheo]     = useState({});
   const [adminSaved,    setAdminSaved]    = useState(false);
   const [editKey,       setEditKey]       = useState("");
-  const pollTimer = useRef(null);
 
   const fetchBoard = useCallback(async (triggerAI=false) => {
     setLoading(true);
@@ -345,23 +221,7 @@ export default function WM42() {
     setResults(fetchedRes);
     setLastRefresh(new Date());
     setLoading(false);
-    if (triggerAI) await runAIFetch(fetchedRes);
   }, []);
-
-  const runAIFetch = async (existingResults) => {
-    setAiStatus({ text:"🤖 Scanning for live results…", type:"fetching" });
-    try {
-      const r = await fetchResultsFromAI(existingResults);
-      r.theories = existingResults?.theories || {};
-      r.gameOver  = existingResults?.gameOver  || false;
-      await saveShared(RESULTS_KEY, r);
-      setResults(r);
-      const resolved = Object.values(r.picks||{}).filter(Boolean).length;
-      setAiStatus({ text: resolved===0 ? "⏳ Show hasn't started — checking every 5 mins" : `✅ ${resolved}/${matches.length} results · ${r.lastUpdated}`, type:"ok" });
-    } catch(e) {
-      setAiStatus({ text:`⚠️ ${e.message}`, type:"error" });
-    }
-  };
 
   useEffect(() => {
     if (results) { setAdminPicks(results.picks||{}); setAdminOu(results.overUnders||{}); setAdminWc(results.wildCards||{}); setAdminTheo(results.theories||{}); }
@@ -369,8 +229,7 @@ export default function WM42() {
 
   useEffect(() => {
     if (tab==="board") {
-      fetchBoard(true);
-      pollTimer.current = setInterval(()=>runAIFetch(results), AUTO_POLL_MS);
+      fetchBoard();
 
       // Realtime subscriptions
       const picksChan = subscribeToKey(PICKS_KEY, (newVal) => {
@@ -381,12 +240,10 @@ export default function WM42() {
       });
 
       return () => {
-        clearInterval(pollTimer.current);
         picksChan.unsubscribe();
         resultsChan.unsubscribe();
       };
     }
-    return () => clearInterval(pollTimer.current);
   }, [tab]);
 
   async function handleSubmit() {
@@ -457,7 +314,7 @@ export default function WM42() {
       <div style={{ flexShrink:0, textAlign:"center", padding:"12px 16px 10px", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.2)" }}>
         <div style={{ fontSize:9, letterSpacing:"0.3em", color:"#6a5f50", textTransform:"uppercase", marginBottom:3 }}>April 18–19 · Las Vegas · Allegiant Stadium</div>
         <h1 style={{ fontSize:"clamp(20px,5vw,34px)", fontWeight:900, background:`linear-gradient(135deg,#f5e06a,${GOLD},#e8d060)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:0, lineHeight:1, textTransform:"uppercase", letterSpacing:"-0.02em" }}>WrestleMania 42</h1>
-        <div style={{ fontSize:9, letterSpacing:"0.18em", color:"#4a4030", textTransform:"uppercase", marginTop:3 }}>Pick 'Em · Max {maxScore()} pts · 🤖 AI Live Scoring</div>
+        <div style={{ fontSize:9, letterSpacing:"0.18em", color:"#4a4030", textTransform:"uppercase", marginTop:3 }}>Pick 'Em · Max {maxScore()} pts</div>
       </div>
       {/* Progress */}
       {tab==="pick" && step<STEPS && (
@@ -475,8 +332,8 @@ export default function WM42() {
       <div style={{ flex:1, overflowY:"auto", padding:"14px 12px 40px" }}>
         <div style={{ maxWidth:620, margin:"0 auto" }}>
           {tab==="pick"  && renderPick()}
-          {tab==="board" && <BoardTab subs={subs} results={results} loading={loading} lastRefresh={lastRefresh} aiStatus={aiStatus} onRefresh={()=>fetchBoard(true)} />}
-          {tab==="admin" && <AdminTab unlocked={adminUnlocked} setUnlocked={setAdminUnlocked} pass={adminPass} setPass={setAdminPass} adminPicks={adminPicks} setAdminPicks={setAdminPicks} adminOu={adminOu} setAdminOu={setAdminOu} adminWc={adminWc} setAdminWc={setAdminWc} adminTheo={adminTheo} setAdminTheo={setAdminTheo} onSave={handleSaveAdmin} onMarkDone={handleMarkDone} onClear={handleClearAll} saved={adminSaved} setSaved={setAdminSaved} results={results} subs={subs} onForceFetch={()=>runAIFetch(results)} aiStatus={aiStatus} />}
+          {tab==="board" && <BoardTab subs={subs} results={results} loading={loading} lastRefresh={lastRefresh} onRefresh={()=>fetchBoard()} />}
+          {tab==="admin" && <AdminTab unlocked={adminUnlocked} setUnlocked={setAdminUnlocked} pass={adminPass} setPass={setAdminPass} adminPicks={adminPicks} setAdminPicks={setAdminPicks} adminOu={adminOu} setAdminOu={setAdminOu} adminWc={adminWc} setAdminWc={setAdminWc} adminTheo={adminTheo} setAdminTheo={setAdminTheo} onSave={handleSaveAdmin} onMarkDone={handleMarkDone} onClear={handleClearAll} saved={adminSaved} setSaved={setAdminSaved} results={results} subs={subs} />}
         </div>
       </div>
     </div>
@@ -542,7 +399,7 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
     <div style={{ textAlign:"center", paddingTop:8 }}>
       <div style={{ fontSize:32, marginBottom:6 }}>🏟️</div>
       <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:19 }}>WrestleMania 42 Pick 'Em</h2>
-      <p style={{ color:"#6a6050", fontSize:12, marginBottom:16, lineHeight:1.5 }}>Odds-based scoring · underdogs worth more · AI auto-scores live<br/>Edit your picks anytime before the show starts</p>
+      <p style={{ color:"#6a6050", fontSize:12, marginBottom:16, lineHeight:1.5 }}>Pick your winners · scores update live during the show<br/>Edit your picks anytime before the show starts</p>
       <input style={{ ...S.input, maxWidth:300, textAlign:"center", margin:"0 auto 14px", display:"block" }} placeholder="Your name…" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&name.trim()&&handleNameSubmit()} />
       <button style={S.btn(GOLD,!name.trim()||checking)} disabled={!name.trim()||checking} onClick={handleNameSubmit}>{checking ? "Checking…" : "Start Picking →"}</button>
       <div style={{ display:"flex", gap:8, justifyContent:"center", marginTop:16, flexWrap:"wrap" }}>
@@ -745,7 +602,7 @@ function ReviewStep({ name, picks, ouPicks, wcPicks, theoPicks, loading, onBack,
           return theoPicks[t.id] ? <Row key={t.id} label={t.label} value={theoPicks[t.id]} pts={t.pts} /> : null;
         })}
       </Section>
-      <div style={{ textAlign:"center", color:"#3a3030", fontSize:10, marginBottom:14 }}>Max {maxScore()} pts · AI scores automatically</div>
+      <div style={{ textAlign:"center", color:"#3a3030", fontSize:10, marginBottom:14 }}>Max {maxScore()} pts · scores update live during the show</div>
       <NavRow onBack={onBack} onNext={onSubmit} nextDisabled={loading} nextLabel={loading?"Saving…":"🔒 Lock In Picks"} />
     </div>
   );
@@ -787,7 +644,7 @@ function LockedStep() {
 }
 
 // ─── BOARD TAB ───────────────────────────────────────────────────────────────
-function BoardTab({ subs, results, loading, lastRefresh, aiStatus, onRefresh }) {
+function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
   const [view, setView] = useState("leaders");
   const gameOver = results?.gameOver || false;
   const resolvedCount = Object.values(results?.picks||{}).filter(Boolean).length;
@@ -836,13 +693,6 @@ function BoardTab({ subs, results, loading, lastRefresh, aiStatus, onRefresh }) 
           <div style={{ fontSize:10, letterSpacing:"0.2em", color:"#4a4040", textTransform:"uppercase", marginBottom:4 }}>Currently Leading</div>
           <div style={{ fontSize:18, fontWeight:700, color:"#d0c4a8", filter:"blur(4px)", userSelect:"none" }}>{scored[0]?.name}</div>
           <div style={{ fontSize:11, color:"#4a4040", marginTop:4 }}>Trophy revealed when Admin marks the show complete</div>
-        </div>
-      )}
-
-      {/* AI Status */}
-      {aiStatus && (
-        <div style={{ background:aiStatus.type==="error"?`${RED}18`:aiStatus.type==="fetching"?`${BLUE}18`:`${GREEN}18`, border:`1px solid ${aiStatus.type==="error"?RED:aiStatus.type==="fetching"?BLUE:GREEN}40`, borderRadius:6, padding:"8px 12px", marginBottom:12, fontSize:11, color:aiStatus.type==="error"?RED:aiStatus.type==="fetching"?BLUE:"#6aff6a" }}>
-          {aiStatus.text}
         </div>
       )}
 
@@ -1035,12 +885,12 @@ function BoardTab({ subs, results, loading, lastRefresh, aiStatus, onRefresh }) 
 }
 
 // ─── ADMIN TAB ───────────────────────────────────────────────────────────────
-function AdminTab({ unlocked, setUnlocked, pass, setPass, adminPicks, setAdminPicks, adminOu, setAdminOu, adminWc, setAdminWc, adminTheo, setAdminTheo, onSave, onMarkDone, onClear, saved, setSaved, results, subs, onForceFetch, aiStatus }) {
+function AdminTab({ unlocked, setUnlocked, pass, setPass, adminPicks, setAdminPicks, adminOu, setAdminOu, adminWc, setAdminWc, adminTheo, setAdminTheo, onSave, onMarkDone, onClear, saved, setSaved, results, subs }) {
   if (!unlocked) return (
     <div style={{ textAlign:"center", paddingTop:32 }}>
       <div style={{ fontSize:36, marginBottom:8 }}>🔐</div>
       <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:18 }}>Admin Override</h2>
-      <p style={{ color:"#5a5040", fontSize:11, marginBottom:18, lineHeight:1.5 }}>AI handles match scoring automatically.<br/>Use this to enter wild card / theory results and mark the show done.</p>
+      <p style={{ color:"#5a5040", fontSize:11, marginBottom:18, lineHeight:1.5 }}>Enter match results, wild card outcomes, and theory results live.<br/>Mark the show done to reveal the winner.</p>
       <input type="password" style={{ ...S.input, maxWidth:240, textAlign:"center", margin:"0 auto 14px", display:"block" }} placeholder="Password…" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&(pass===ADMIN_PASS?setUnlocked(true):alert("Wrong password"))} />
       <button style={S.btn(GOLD,!pass)} disabled={!pass} onClick={()=>pass===ADMIN_PASS?setUnlocked(true):alert("Wrong password")}>Unlock</button>
       <div style={{ marginTop:16, fontSize:10, color:"#3a3030" }}>Hint: vegaswm42</div>
@@ -1051,13 +901,6 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, adminPicks, setAdminPi
 
   return (
     <div>
-      {/* AI Status & Force Fetch */}
-      <div style={{ ...S.card, borderColor:`${BLUE}40`, marginBottom:14 }}>
-        <div style={{ fontSize:10, color:"#5a8ab0", marginBottom:8 }}>🤖 AI Auto-Scoring</div>
-        <div style={{ fontSize:11, color:aiStatus?.type==="ok"?"#6aff6a":aiStatus?.type==="error"?RED:"#7a7060", marginBottom:10 }}>{aiStatus?.text||"Open Live Board to trigger"}</div>
-        <button onClick={onForceFetch} style={{ ...S.btn(BLUE,aiStatus?.type==="fetching"), fontSize:11, padding:"8px 16px" }} disabled={aiStatus?.type==="fetching"}>{aiStatus?.type==="fetching"?"Fetching…":"↻ Force AI Fetch"}</button>
-      </div>
-
       {/* Mark Done */}
       <div style={{ ...S.card, borderColor: results?.gameOver?`${GREEN}60`:`${GOLD}30`, marginBottom:14 }}>
         <div style={{ fontSize:10, color:results?.gameOver?GREEN:GOLD, marginBottom:8 }}>🏆 Show Status</div>
