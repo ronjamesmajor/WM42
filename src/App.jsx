@@ -114,7 +114,7 @@ const SURPRISE_PTS   = 2; // +2 per correct, −2 per wrong
 
 const PICKS_KEY    = "wm42_v4_picks";
 const RESULTS_KEY  = "wm42_v4_results";
-const ADMIN_PASS   = "vegaswm42";
+const ADMIN_PASS   = import.meta.env.VITE_ADMIN_PASS || "";
 // Lockout: 12:00 AM ET on Saturday April 18, 2026 (midnight before the show)
 const LOCKOUT_UTC  = new Date("2026-04-18T04:00:00Z");
 function isLocked() { return Date.now() >= LOCKOUT_UTC.getTime(); }
