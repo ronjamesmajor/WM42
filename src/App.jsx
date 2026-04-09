@@ -397,7 +397,7 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
           ["📋","Match Picks",`${MATCH_PTS} pts each`],
           ["🎯","Match Bonuses",`${BONUS_PTS} pts each`],
           ["📊","End Bonuses",`${BONUS_PTS} pts each`],
-          ["🎭","Surprises","±${SURPRISE_PTS} pts each"],
+          ["🎭","Surprises",`±${SURPRISE_PTS} pts each`],
         ].map(([icon,label,sub])=>(
           <div key={label} style={{ background:BG, border:`1px solid ${BORDER}`, borderRadius:6, padding:"8px 10px", textAlign:"center", minWidth:90, flex:1 }}>
             <div style={{ fontSize:16, marginBottom:2 }}>{icon}</div>
