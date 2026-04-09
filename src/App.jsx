@@ -179,11 +179,11 @@ function calcScore(sub, results) {
 
 // ─── SHARED STYLES ───────────────────────────────────────────────────────────
 const S = {
-  input: { width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.06)", border:`1px solid ${GOLD}40`, borderRadius:8, color:"#f0e6d3", fontSize:16, padding:"14px 16px", outline:"none", fontFamily:"Georgia, serif" },
-  btn: (color=GOLD, disabled=false) => ({ background:disabled?"rgba(255,255,255,0.04)":`linear-gradient(135deg,${color}cc,${color})`, border:"none", borderRadius:8, color:disabled?"#4a4040":(color===GOLD?"#0c0b12":"#fff"), cursor:disabled?"not-allowed":"pointer", fontSize:14, fontWeight:700, letterSpacing:"0.1em", padding:"14px 28px", textTransform:"uppercase", fontFamily:"Georgia, serif", transition:"all 0.15s" }),
-  card: { background:BG, border:`1px solid ${BORDER}`, borderRadius:12, padding:"16px 16px", marginBottom:14 },
-  lbl:  { fontSize:12, letterSpacing:"0.2em", color:GOLD, textTransform:"uppercase", marginBottom:10 },
-  ptsBadge: (pts, color) => ({ fontSize:11, letterSpacing:"0.06em", color:color||GOLD, background:`${color||GOLD}18`, padding:"3px 9px", borderRadius:4, fontWeight:700, whiteSpace:"nowrap" }),
+  input: { width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.06)", border:`1px solid ${GOLD}35`, borderRadius:10, color:"#f0e6d3", fontSize:17, padding:"15px 18px", outline:"none", fontFamily:"Georgia, serif" },
+  btn: (color=GOLD, disabled=false) => ({ background:disabled?"rgba(255,255,255,0.04)":`linear-gradient(135deg,${color}cc,${color})`, border:"none", borderRadius:10, color:disabled?"#4a4040":(color===GOLD?"#0c0b12":"#fff"), cursor:disabled?"not-allowed":"pointer", fontSize:15, fontWeight:700, letterSpacing:"0.1em", padding:"16px 30px", textTransform:"uppercase", fontFamily:"Georgia, serif", transition:"all 0.15s" }),
+  card: { background:"rgba(255,255,255,0.025)", border:`1px solid rgba(255,255,255,0.06)`, borderRadius:14, padding:"18px 18px", marginBottom:16 },
+  lbl:  { fontSize:13, letterSpacing:"0.18em", color:GOLD, textTransform:"uppercase", marginBottom:12 },
+  ptsBadge: (pts, color) => ({ fontSize:12, letterSpacing:"0.05em", color:color||GOLD, background:`${color||GOLD}15`, padding:"4px 10px", borderRadius:6, fontWeight:700, whiteSpace:"nowrap" }),
 };
 
 // ─── ROOT ────────────────────────────────────────────────────────────────────
@@ -301,10 +301,10 @@ export default function WM42() {
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:"radial-gradient(ellipse at 20% 10%, #1a1228 0%, #0c0b12 55%, #0f0d18 100%)", color:"#f0e6d3", fontFamily:"Georgia, serif", overflow:"hidden" }}>
       {/* Header */}
-      <div style={{ flexShrink:0, textAlign:"center", padding:"16px 16px 12px", borderBottom:"1px solid rgba(200,160,40,0.15)", background:"rgba(0,0,0,0.25)" }}>
-        <div style={{ fontSize:10, letterSpacing:"0.3em", color:"#6a5f50", textTransform:"uppercase", marginBottom:4 }}>April 18–19 · Las Vegas · Allegiant Stadium</div>
-        <h1 style={{ fontSize:"clamp(24px,6vw,38px)", fontWeight:900, background:`linear-gradient(135deg,#f5e06a,${GOLD},#e8d060)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:0, lineHeight:1, textTransform:"uppercase", letterSpacing:"-0.02em" }}>WrestleMania 42</h1>
-        <div style={{ fontSize:11, letterSpacing:"0.15em", color:"#4a4030", textTransform:"uppercase", marginTop:5 }}>Pick 'Em · Max {maxScore()} pts</div>
+      <div style={{ flexShrink:0, textAlign:"center", padding:"18px 16px 14px", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.3)" }}>
+        <div style={{ fontSize:11, letterSpacing:"0.3em", color:"#5a5040", textTransform:"uppercase", marginBottom:5 }}>April 18–19 · Las Vegas · Allegiant Stadium</div>
+        <h1 style={{ fontSize:"clamp(26px,7vw,40px)", fontWeight:900, background:`linear-gradient(135deg,#f5e06a,${GOLD},#e8d060)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:0, lineHeight:1, textTransform:"uppercase", letterSpacing:"-0.02em" }}>WrestleMania 42</h1>
+        <div style={{ fontSize:12, letterSpacing:"0.12em", color:"#4a4030", textTransform:"uppercase", marginTop:6 }}>Pick 'Em · Max {maxScore()} pts</div>
       </div>
       {/* Progress */}
       {tab==="pick" && step<STEPS && (
@@ -315,7 +315,7 @@ export default function WM42() {
       {/* Tabs */}
       <div style={{ flexShrink:0, display:"flex", background:"rgba(0,0,0,0.35)", borderBottom:`1px solid ${BORDER}` }}>
         {[["pick","📋 Pick 'Em"],["board","📊 Live Board"],["admin","🔐 Admin"]].map(([id,label])=>(
-          <button key={id} onClick={()=>setTab(id)} style={{ flex:1, padding:"14px 4px", fontSize:11, letterSpacing:"0.12em", textTransform:"uppercase", textAlign:"center", cursor:"pointer", border:"none", background:"transparent", color:tab===id?GOLD:"#4a4040", borderBottom:tab===id?`2px solid ${GOLD}`:"2px solid transparent", fontFamily:"Georgia, serif", transition:"color 0.15s" }}>{label}</button>
+          <button key={id} onClick={()=>setTab(id)} style={{ flex:1, padding:"15px 4px", fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", textAlign:"center", cursor:"pointer", border:"none", background:"transparent", color:tab===id?GOLD:"#4a4040", borderBottom:tab===id?`2px solid ${GOLD}`:"2px solid transparent", fontFamily:"Georgia, serif", transition:"color 0.15s" }}>{label}</button>
         ))}
       </div>
       {/* Content */}
@@ -418,17 +418,17 @@ function BonusQuestion({ bonus, value, onChange }) {
       <div style={{ display:"flex", gap:8 }}>
         {["Yes","No"].map(opt => {
           const sel = value === opt;
-          return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, background:sel?`${PURPLE}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:5 }}>✓</span>}</button>;
+          return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, background:sel?`${PURPLE}18`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}70`:`1px solid rgba(255,255,255,0.06)`, borderRadius:10, padding:"14px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:15, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:5 }}>✓</span>}</button>;
         })}
       </div>
     );
   }
   if (bonus.type === "overunder") {
     return (
-      <div style={{ display:"flex", gap:8 }}>
+      <div style={{ display:"flex", gap:10 }}>
         {["Over","Under"].map(opt => {
           const sel = value === opt;
-          return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, background:sel?`${PURPLE}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:5 }}>✓</span>}</button>;
+          return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, background:sel?`${PURPLE}18`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}70`:`1px solid rgba(255,255,255,0.06)`, borderRadius:10, padding:"14px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:15, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:5 }}>✓</span>}</button>;
         })}
       </div>
     );
@@ -438,7 +438,7 @@ function BonusQuestion({ bonus, value, onChange }) {
       <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
         {bonus.options.map(opt => {
           const sel = value === opt;
-          return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, minWidth:80, background:sel?`${PURPLE}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"10px 12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:13, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:4 }}>✓</span>}</button>;
+          return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, minWidth:85, background:sel?`${PURPLE}18`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}70`:`1px solid rgba(255,255,255,0.06)`, borderRadius:10, padding:"12px 14px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:4 }}>✓</span>}</button>;
         })}
       </div>
     );
@@ -456,30 +456,30 @@ function MatchStep({ night, picks, setPicks, bonusPicks, setBonusPicks, onBack, 
         <div key={m.id} style={{ ...S.card, borderColor:m.isMain?`${GOLD}40`:BORDER, position:"relative", overflow:"hidden" }}>
           {m.isMain && <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${GOLD},transparent)` }} />}
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10, gap:8 }}>
-            <div style={{ fontSize:12, letterSpacing:"0.12em", color:m.isMain?GOLD:PURPLE, textTransform:"uppercase", lineHeight:1.4 }}>
+            <div style={{ fontSize:13, letterSpacing:"0.1em", color:m.isMain?GOLD:PURPLE, textTransform:"uppercase", lineHeight:1.4 }}>
               {m.title}{m.note&&<span style={{ color:"#4a4040" }}> · {m.note}</span>}
             </div>
-            {m.isMain && <div style={{ fontSize:10, color:GOLD, background:`${GOLD}18`, padding:"3px 9px", borderRadius:4, whiteSpace:"nowrap" }}>★ Main Event</div>}
+            {m.isMain && <div style={{ fontSize:11, color:GOLD, background:`${GOLD}15`, padding:"4px 10px", borderRadius:6, whiteSpace:"nowrap" }}>★ Main Event</div>}
           </div>
           {/* Winner pick */}
-          <div style={{ fontSize:11, color:"#5a5040", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.1em" }}>Winner · {MATCH_PTS} pts</div>
+          <div style={{ fontSize:12, color:"#5a5040", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.1em" }}>Winner · {MATCH_PTS} pts</div>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
             {m.competitors.map(c=>{
               const sel=picks[m.id]===c.name;
               return (
-                <button key={c.name} onClick={()=>setPicks(p=>({...p,[m.id]:p[m.id]===c.name?undefined:c.name}))} style={{ flex:1, minWidth:120, background:sel?`${GOLD}18`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"12px 14px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", textAlign:"left", fontFamily:"Georgia, serif", transition:"all 0.15s" }}>
-                  <div style={{ fontSize:15, fontWeight:sel?700:400, lineHeight:1.3 }}>{c.name}</div>
-                  {c.role && <div style={{ fontSize:11, color:sel?GOLD:"#4a4040", marginTop:4 }}>{c.role}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</div>}
-                  {!c.role && sel && <div style={{ fontSize:11, color:GOLD, marginTop:4 }}>✓</div>}
+                <button key={c.name} onClick={()=>setPicks(p=>({...p,[m.id]:p[m.id]===c.name?undefined:c.name}))} style={{ flex:1, minWidth:120, background:sel?`${GOLD}15`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}70`:`1px solid rgba(255,255,255,0.06)`, borderRadius:10, padding:"14px 16px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", textAlign:"left", fontFamily:"Georgia, serif", transition:"all 0.15s" }}>
+                  <div style={{ fontSize:16, fontWeight:sel?700:400, lineHeight:1.3 }}>{c.name}</div>
+                  {c.role && <div style={{ fontSize:12, color:sel?GOLD:"#4a4040", marginTop:4 }}>{c.role}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</div>}
+                  {!c.role && sel && <div style={{ fontSize:12, color:GOLD, marginTop:4 }}>✓</div>}
                 </button>
               );
             })}
           </div>
           {/* Inline bonuses */}
           {(m.bonuses||[]).map(b=>(
-            <div key={b.id} style={{ marginTop:14, padding:"12px 14px", background:"rgba(155,89,182,0.06)", border:`1px solid ${PURPLE}30`, borderRadius:8 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                <div style={{ fontSize:13, color:"#d0c4a8" }}>{b.label}</div>
+            <div key={b.id} style={{ marginTop:14, padding:"14px 16px", background:"rgba(155,89,182,0.05)", border:`1px solid ${PURPLE}25`, borderRadius:10 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                <div style={{ fontSize:14, color:"#d0c4a8" }}>{b.label}</div>
                 <div style={{ ...S.ptsBadge(BONUS_PTS, PURPLE) }}>{BONUS_PTS} pts</div>
               </div>
               {b.line && <div style={{ fontSize:11, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:8 }}>{b.line}</div>}
@@ -660,14 +660,14 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
       )}
 
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-        <div style={{ fontSize:13, color:"#5a5040" }}>{subs.length} submission{subs.length!==1?"s":""} · {resolvedCount}/{matches.length} results{lastRefresh?` · ${lastRefresh.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`:""}</div>
-        <button onClick={onRefresh} style={{ background:"transparent", border:`1px solid ${GOLD}40`, borderRadius:8, color:GOLD, cursor:"pointer", fontSize:13, padding:"8px 16px", fontFamily:"Georgia, serif" }}>{loading?"…":"↻"}</button>
+        <div style={{ fontSize:14, color:"#5a5040" }}>{subs.length} submission{subs.length!==1?"s":""} · {resolvedCount}/{matches.length} results{lastRefresh?` · ${lastRefresh.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`:""}</div>
+        <button onClick={onRefresh} style={{ background:"transparent", border:`1px solid ${GOLD}35`, borderRadius:10, color:GOLD, cursor:"pointer", fontSize:14, padding:"10px 18px", fontFamily:"Georgia, serif" }}>{loading?"…":"↻"}</button>
       </div>
 
       {/* Sub-tabs */}
       <div style={{ display:"flex", border:`1px solid ${BORDER}`, borderRadius:8, overflow:"hidden", marginBottom:18 }}>
         {[["leaders","🏅 Leaderboard"],["breakdown","📊 Breakdown"]].map(([id,label])=>(
-          <button key={id} onClick={()=>setView(id)} style={{ flex:1, padding:"13px", fontSize:13, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", background:view===id?`${GOLD}22`:"transparent", color:view===id?GOLD:"#4a4040", borderRight:id==="leaders"?`1px solid ${BORDER}`:"none" }}>{label}</button>
+          <button key={id} onClick={()=>setView(id)} style={{ flex:1, padding:"14px", fontSize:14, letterSpacing:"0.08em", textTransform:"uppercase", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", background:view===id?`${GOLD}18`:"transparent", color:view===id?GOLD:"#4a4040", borderRight:id==="leaders"?`1px solid rgba(255,255,255,0.06)`:"none" }}>{label}</button>
         ))}
       </div>
 
@@ -908,7 +908,7 @@ function NightHdr({ night }) {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
       <div style={{ height:1, flex:1, background:`linear-gradient(90deg,transparent,${col}40)` }} />
-      <div style={{ fontSize:11, letterSpacing:"0.2em", color:col, textTransform:"uppercase", whiteSpace:"nowrap" }}>{night===1?"Night 1 · Saturday, April 18":"Night 2 · Sunday, April 19"}</div>
+      <div style={{ fontSize:12, letterSpacing:"0.18em", color:col, textTransform:"uppercase", whiteSpace:"nowrap" }}>{night===1?"Night 1 · Saturday, April 18":"Night 2 · Sunday, April 19"}</div>
       <div style={{ height:1, flex:1, background:`linear-gradient(90deg,${col}40,transparent)` }} />
     </div>
   );
@@ -916,16 +916,16 @@ function NightHdr({ night }) {
 function StepHdr({ icon, title, sub }) {
   return (
     <div style={{ textAlign:"center", marginBottom:22 }}>
-      <div style={{ fontSize:32, marginBottom:6 }}>{icon}</div>
-      <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:22 }}>{title}</h2>
-      <div style={{ fontSize:13, color:"#5a5040" }}>{sub}</div>
+      <div style={{ fontSize:34, marginBottom:8 }}>{icon}</div>
+      <h2 style={{ color:GOLD, margin:"0 0 5px", fontSize:24 }}>{title}</h2>
+      <div style={{ fontSize:14, color:"#5a5040" }}>{sub}</div>
     </div>
   );
 }
 function NavRow({ onBack, onNext, nextDisabled, nextLabel }) {
   return (
     <div style={{ display:"flex", gap:12, marginTop:24, justifyContent:"space-between" }}>
-      <button onClick={onBack} style={{ background:"transparent", border:`1px solid rgba(255,255,255,0.12)`, borderRadius:8, color:"#6a6050", cursor:"pointer", fontSize:14, padding:"14px 22px", fontFamily:"Georgia, serif" }}>← Back</button>
+      <button onClick={onBack} style={{ background:"transparent", border:`1px solid rgba(255,255,255,0.1)`, borderRadius:10, color:"#6a6050", cursor:"pointer", fontSize:15, padding:"15px 24px", fontFamily:"Georgia, serif" }}>← Back</button>
       <button style={S.btn(GOLD,nextDisabled)} disabled={nextDisabled} onClick={onNext}>{nextLabel}</button>
     </div>
   );
