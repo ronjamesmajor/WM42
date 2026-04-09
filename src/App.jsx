@@ -633,36 +633,34 @@ function LockedStep() {
 // ─── BOARD TAB ───────────────────────────────────────────────────────────────
 function TriviaTicker({ subs }) {
   const [idx, setIdx] = useState(0);
+  const shuffledRef = useRef([]);
+
   const facts = (() => {
     if (!subs.length) return [];
     const items = [];
 
-    // Fastest to lock in (earliest timestamp)
     const sorted = [...subs].sort((a,b) => a.ts - b.ts);
     if (sorted.length) items.push(`⚡ First to lock in: ${sorted[0].name}`);
-
-    // Last to finish
     if (sorted.length > 1) items.push(`🐢 Last to finish their card: ${sorted[sorted.length-1].name}`);
 
-    // Most edits (highest timestamp = most recent edit, but we track by ts)
-    // Since each edit overwrites ts, the person who edited most recently after others
     const byRecent = [...subs].sort((a,b) => b.ts - a.ts);
     if (byRecent.length > 1 && byRecent[0].ts !== sorted[sorted.length-1].ts) {
       items.push(`✏️ Most recent edit: ${byRecent[0].name}`);
     }
 
-    // Most surprise guesses filled
     const mostSurprises = [...subs].sort((a,b) => (b.surprises||[]).filter(Boolean).length - (a.surprises||[]).filter(Boolean).length);
     if (mostSurprises[0] && (mostSurprises[0].surprises||[]).filter(Boolean).length > 0) {
       items.push(`🔮 Most surprise guesses: ${mostSurprises[0].name} (${(mostSurprises[0].surprises||[]).filter(Boolean).length})`);
     }
 
-    // Total picks across all players
     const totalPicks = subs.reduce((a,s) => a + Object.keys(s.picks||{}).filter(k=>s.picks[k]).length, 0);
     items.push(`📊 ${totalPicks} total match picks across ${subs.length} players`);
-
-    // Player count
     if (subs.length >= 3) items.push(`🏟️ ${subs.length} competitors entered the ring`);
+
+    // Surprise names as ticker items
+    const nameSet = new Set();
+    subs.forEach(s => (s.surprises||[]).filter(Boolean).forEach(g => nameSet.add(g.trim())));
+    nameSet.forEach(name => items.push(`🎤 "${name}" could be a surprise return / debut`));
 
     // Meta facts
     items.push("💻 Built with ~1,200 lines of code in one session");
@@ -670,145 +668,37 @@ function TriviaTicker({ subs }) {
     items.push("🦆 A group of ducks is called a paddling");
     items.push("🦆 Ducks can sleep with one eye open");
     items.push("❤️ Thanks for playing — you're the real main event");
-    const uniqueNames = new Set();
-    subs.forEach(s => (s.surprises||[]).filter(Boolean).forEach(g => uniqueNames.add(g.trim())));
-    if (uniqueNames.size > 0) items.push(`🎭 ${uniqueNames.size} unique surprise names in the pool`);
 
     return items;
   })();
 
+  // Shuffle once when fact list changes, then cycle through
   useEffect(() => {
-    if (facts.length <= 1) return;
-    const timer = setInterval(() => setIdx(i => (i + 1) % facts.length), 5000);
+    const shuffled = [...facts];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    shuffledRef.current = shuffled;
+    setIdx(0);
+  }, [facts.length]);
+
+  useEffect(() => {
+    if (shuffledRef.current.length <= 1) return;
+    const timer = setInterval(() => setIdx(i => (i + 1) % shuffledRef.current.length), 5000);
     return () => clearInterval(timer);
   }, [facts.length]);
 
-  if (!facts.length) return null;
+  if (!shuffledRef.current.length) return null;
+  const current = shuffledRef.current[idx % shuffledRef.current.length] || "";
 
   return (
     <div style={{ overflow:"hidden", height:28, marginBottom:14, position:"relative" }}>
-      {facts.map((f, i) => (
-        <div key={f} style={{
-          position:"absolute", top:0, left:0, right:0,
-          fontSize:13, color:GOLD, textAlign:"center", fontFamily:"Georgia, serif",
-          opacity:i===idx?1:0, transform:i===idx?"translateY(0)":"translateY(8px)",
-          transition:"opacity 1s ease, transform 1s ease",
-        }}>{f}</div>
-      ))}
-    </div>
-  );
-}
-
-function SurprisePool({ subs }) {
-  const counts = {};
-  subs.forEach(sub => {
-    (sub.surprises || []).filter(Boolean).forEach(g => {
-      const key = g.trim();
-      if (key) counts[key] = (counts[key] || 0) + 1;
-    });
-  });
-  const names = Object.entries(counts);
-  const maxCount = Math.max(1, ...names.map(([,c])=>c));
-  const containerRef = useRef(null);
-  const particlesRef = useRef([]);
-  const rafRef = useRef(null);
-  const [positions, setPositions] = useState([]);
-
-  useEffect(() => {
-    if (!names.length) return;
-    const H = 200, PAD = 14, TOP_PAD = 30;
-
-    // Measure actual container width
-    const el = containerRef.current;
-    const W = el ? el.offsetWidth : 320;
-
-    // Size each particle based on name length — small base, grows with dupes
-    particlesRef.current = names.map(([name, count], i) => {
-      const fs = count > 1 ? 10 + Math.min(count, 4) * 2 : 10;
-      const estW = name.length * fs * 0.52 + 20;
-      const estH = fs + 10;
-      // Place in a grid-ish pattern to start, avoiding overlaps
-      const cols = Math.floor(W / 100) || 2;
-      const col = i % cols, row = Math.floor(i / cols);
-      return {
-        x: PAD + col * ((W - PAD*2) / cols) + Math.random() * 20,
-        y: TOP_PAD + row * 32 + Math.random() * 10,
-        vx: (0.08 + Math.random() * 0.12) * (Math.random() > 0.5 ? 1 : -1),
-        vy: (0.06 + Math.random() * 0.1) * (Math.random() > 0.5 ? 1 : -1),
-        w: estW, h: estH,
-      };
-    });
-
-    let last = 0;
-    function tick(ts) {
-      if (!last) last = ts;
-      const dt = Math.min(ts - last, 32);
-      last = ts;
-      const cW = containerRef.current ? containerRef.current.offsetWidth : W;
-
-      particlesRef.current.forEach((p, i) => {
-        p.x += p.vx * dt * 0.04;
-        p.y += p.vy * dt * 0.04;
-        // Wall bounce
-        if (p.x < PAD) { p.x = PAD; p.vx = Math.abs(p.vx); }
-        if (p.x + p.w > cW - PAD) { p.x = cW - PAD - p.w; p.vx = -Math.abs(p.vx); }
-        if (p.y < TOP_PAD) { p.y = TOP_PAD; p.vy = Math.abs(p.vy); }
-        if (p.y + p.h > H - PAD) { p.y = H - PAD - p.h; p.vy = -Math.abs(p.vy); }
-        // Hard separation — push apart if bounding boxes overlap
-        for (let j = i + 1; j < particlesRef.current.length; j++) {
-          const q = particlesRef.current[j];
-          const overlapX = Math.min(p.x+p.w, q.x+q.w) - Math.max(p.x, q.x);
-          const overlapY = Math.min(p.y+p.h, q.y+q.h) - Math.max(p.y, q.y);
-          if (overlapX > 0 && overlapY > 0) {
-            // Push along the axis with less overlap
-            const dx = (p.x + p.w/2) - (q.x + q.w/2);
-            const dy = (p.y + p.h/2) - (q.y + q.h/2);
-            if (Math.abs(dx) > Math.abs(dy)) {
-              const push = overlapX * 0.5 + 1;
-              if (dx > 0) { p.x += push; q.x -= push; } else { p.x -= push; q.x += push; }
-              p.vx = dx > 0 ? Math.abs(p.vx) : -Math.abs(p.vx);
-              q.vx = -p.vx;
-            } else {
-              const push = overlapY * 0.5 + 1;
-              if (dy > 0) { p.y += push; q.y -= push; } else { p.y -= push; q.y += push; }
-              p.vy = dy > 0 ? Math.abs(p.vy) : -Math.abs(p.vy);
-              q.vy = -p.vy;
-            }
-          }
-        }
-      });
-
-      setPositions(particlesRef.current.map(p => ({ x: p.x, y: p.y })));
-      rafRef.current = requestAnimationFrame(tick);
-    }
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [names.length]);
-
-  if (!names.length) return null;
-
-  return (
-    <div ref={containerRef} style={{ ...S.card, borderColor:`${PURPLE}30`, marginBottom:18, position:"relative", overflow:"hidden", height:200 }}>
-      <div style={{ ...S.lbl, color:PURPLE, marginBottom:0, position:"relative", zIndex:2 }}>Surprise Pool</div>
-      {names.map(([name, count], i) => {
-        const pos = positions[i] || { x: 20, y: 36 };
-        const fs = count > 1 ? 10 + Math.min(count, 4) * 2 : 10;
-        return (
-          <div key={name} style={{
-            position:"absolute",
-            left: pos.x, top: pos.y,
-            fontSize: fs,
-            fontWeight: count > 1 ? 700 : 400,
-            color: count > 1 ? GOLD : "#908878",
-            fontFamily:"Georgia, serif",
-            whiteSpace:"nowrap",
-            textShadow: count > 1 ? `0 0 ${count*4}px rgba(200,160,40,0.3)` : "none",
-            willChange:"left,top",
-          }}>
-            {name}{count > 1 && <span style={{ fontSize:9, color:PURPLE, marginLeft:3, verticalAlign:"super" }}>×{count}</span>}
-          </div>
-        );
-      })}
+      <div key={idx} style={{
+        fontSize:13, color:GOLD, textAlign:"center", fontFamily:"Georgia, serif",
+        animation:"tickerFade 5s ease",
+      }}>{current}</div>
+      <style>{`@keyframes tickerFade { 0% { opacity:0; transform:translateY(6px); } 8% { opacity:1; transform:translateY(0); } 85% { opacity:1; transform:translateY(0); } 100% { opacity:0; transform:translateY(-6px); } }`}</style>
     </div>
   );
 }
@@ -901,9 +791,6 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
       {subs.length===0&&!loading&&(
         <div style={{ textAlign:"center", padding:"40px 0", color:"#5a5050", fontSize:16 }}>No submissions yet 🎤</div>
       )}
-
-      {/* Surprise Pool — always visible */}
-      {subs.length>0 && <SurprisePool subs={subs} />}
 
       {/* Leaderboard */}
       {view==="leaders" && scored.length>0 && scored.map((s,i)=>{
