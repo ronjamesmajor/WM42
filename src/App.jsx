@@ -455,7 +455,7 @@ function MatchStep({ night, picks, setPicks, bonusPicks, setBonusPicks, onBack, 
       {nightMatches.map(m=>(
         <div key={m.id} style={{ ...S.card, borderColor:m.isMain?`${GOLD}40`:BORDER, position:"relative", overflow:"hidden" }}>
           {m.isMain && <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${GOLD},transparent)` }} />}
-          {m.belt && <div style={{ position:"absolute", top:"50%", right:"-5%", transform:"translateY(-50%)", width:"45%", maxWidth:200, opacity:0.12, pointerEvents:"none" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(30%) brightness(1.2)" }} /></div>}
+          {m.belt && <div style={{ position:"absolute", top:-10, left:-10, width:100, opacity:0.18, pointerEvents:"none", transform:"rotate(-20deg)", transformOrigin:"center center" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(20%) brightness(1.3)" }} /></div>}
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10, gap:8 }}>
             <div style={{ fontSize:13, letterSpacing:"0.1em", color:m.isMain?GOLD:PURPLE, textTransform:"uppercase", lineHeight:1.4 }}>
               {m.title}{m.note&&<span style={{ color:"#6a6060" }}> · {m.note}</span>}
@@ -646,7 +646,7 @@ function TriviaTicker({ subs }) {
 
   useEffect(() => {
     if (facts.length <= 1) return;
-    const timer = setInterval(() => setIdx(i => (i + 1) % facts.length), 4000);
+    const timer = setInterval(() => setIdx(i => (i + 1) % facts.length), 10000);
     return () => clearInterval(timer);
   }, [facts.length]);
 
@@ -659,7 +659,7 @@ function TriviaTicker({ subs }) {
           position:"absolute", top:0, left:0, right:0,
           fontSize:13, color:GOLD, textAlign:"center", fontFamily:"Georgia, serif",
           opacity:i===idx?1:0, transform:i===idx?"translateY(0)":"translateY(8px)",
-          transition:"all 0.5s ease",
+          transition:"opacity 1s ease, transform 1s ease",
         }}>{f}</div>
       ))}
     </div>
@@ -808,6 +808,9 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
         <div style={{ textAlign:"center", padding:"40px 0", color:"#5a5050", fontSize:16 }}>No submissions yet 🎤</div>
       )}
 
+      {/* Surprise Pool — always visible */}
+      {subs.length>0 && <SurprisePool subs={subs} />}
+
       {/* Leaderboard */}
       {view==="leaders" && scored.length>0 && scored.map((s,i)=>{
         const isFirst = i===0 && s.score!==null && s.score>0;
@@ -851,9 +854,6 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
       {/* Breakdown */}
       {view==="breakdown" && subs.length>0 && (
         <div>
-          {/* Surprise Pool — floating name tank */}
-          <SurprisePool subs={subs} />
-
           {/* Confirmed appearances (if admin has entered them) */}
           {(results?.surprises||[]).filter(Boolean).length > 0 && (
             <div style={{ ...S.card, borderColor:`${GREEN}30`, marginBottom:18 }}>
