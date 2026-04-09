@@ -20,7 +20,7 @@ const matches = [
     { id:"b_m8_a", label:"Who bleeds first?", type:"select", options:["Drew McIntyre","Jacob Fatu"] },
   ]},
   // Main Card
-  { id:"m10", night:1, title:"WWE Women's Tag Team Championship", note:"Fatal 4-Way", competitors:[
+  { id:"m10", night:1, title:"WWE Women's Tag Team Championship", note:"Fatal 4-Way", belt:"./belts/WWE_Women's_Tag_Team_Championship.png", competitors:[
     { name:"Bayley & Lyra Valkyrie",        role:"" },
     { name:"The Bella Twins",               role:"" },
     { name:"Nia Jax & Lash Legend",         role:"Champions" },
@@ -28,7 +28,7 @@ const matches = [
   ], bonuses:[
     { id:"b_m10_a", label:"Who gets the pin?", type:"select", options:["Bayley","Lyra Valkyrie","Nikki Bella","Brie Bella","Nia Jax","Lash Legend","Alexa Bliss","Charlotte Flair"] },
   ]},
-  { id:"m6",  night:1, title:"WWE Women's Intercontinental Championship", competitors:[
+  { id:"m6",  night:1, title:"WWE Women's Intercontinental Championship", belt:"./belts/WWE_Women's_Intercontinental_Championship.jpeg", competitors:[
     { name:"Becky Lynch", role:"Challenger" },
     { name:"AJ Lee",      role:"Champion"   },
   ], bonuses:[
@@ -40,13 +40,13 @@ const matches = [
   ], bonuses:[
     { id:"b_m12_a", label:"Seth Rollins entrance length?", type:"overunder", line:"O/U 2 min 15 sec" },
   ]},
-  { id:"m3",  night:1, title:"WWE Women's World Championship", competitors:[
+  { id:"m3",  night:1, title:"WWE Women's World Championship", belt:"./belts/Women's_World_Championship_(WWE)_2023.jpeg", competitors:[
     { name:"Stephanie Vaquer", role:"Champion"   },
     { name:"Liv Morgan",       role:"Challenger" },
   ], bonuses:[
     { id:"b_m3_a", label:"Do they fight before or after the bell?", type:"select", options:["Before","After"] },
   ]},
-  { id:"m1",  night:1, isMain:true, title:"Undisputed WWE Championship", competitors:[
+  { id:"m1",  night:1, isMain:true, title:"Undisputed WWE Championship", belt:"./belts/Undisputed_WWE_Championship.png", competitors:[
     { name:"Cody Rhodes",  role:"Champion"   },
     { name:"Randy Orton",  role:"Challenger · w/ Pat MAGAFee" },
   ], bonuses:[
@@ -55,7 +55,7 @@ const matches = [
   ]},
   // ── NIGHT 2 (Sunday, April 19) ───────────────────────────────────────────
   // ESPN2 First Hour
-  { id:"m4",  night:2, title:"IC Championship — Ladder Match", note:"6-Way Ladder · ESPN2 First Hour", competitors:[
+  { id:"m4",  night:2, title:"IC Championship — Ladder Match", note:"6-Way Ladder · ESPN2 First Hour", belt:"./belts/WWE_Intercontinental_Championship_2024.png", competitors:[
     { name:"JD McDonagh",  role:""         },
     { name:"Dragon Lee",   role:""         },
     { name:"Penta",        role:"Champion" },
@@ -72,13 +72,13 @@ const matches = [
     { id:"b_m9_a", label:"Someone gets held above their opponent's head?", type:"overunder", line:"O/U 2.5 times" },
   ]},
   // Main Card
-  { id:"m7",  night:2, title:"Undisputed United States Championship", competitors:[
+  { id:"m7",  night:2, title:"Undisputed United States Championship", belt:"./belts/WWE_United_States_Championship_July_2020.png", competitors:[
     { name:"Sami Zayn",       role:"Champion"   },
     { name:"Trick Williams",  role:"Challenger" },
   ], bonuses:[
     { id:"b_m7_a", label:"Pinfall attempts?", type:"overunder", line:"O/U 5.5" },
   ]},
-  { id:"m2",  night:2, title:"WWE Women's Championship", competitors:[
+  { id:"m2",  night:2, title:"WWE Women's Championship", belt:"./belts/WWE_Women's_Championship_(2023).jpeg", competitors:[
     { name:"Jade Cargill", role:"Champion"   },
     { name:"Rhea Ripley",  role:"Challenger" },
   ], bonuses:[
@@ -90,7 +90,7 @@ const matches = [
   ], bonuses:[
     { id:"b_m13_a", label:"Does 'Demonito' make an appearance?", type:"yesno" },
   ]},
-  { id:"m5",  night:2, isMain:true, title:"WWE World Heavyweight Championship", competitors:[
+  { id:"m5",  night:2, isMain:true, title:"WWE World Heavyweight Championship", belt:"./belts/World_Heavyweight_Championship_WWE_2023.png", competitors:[
     { name:"CM Punk",      role:"Champion"   },
     { name:"Roman Reigns", role:"Challenger" },
   ], bonuses:[
@@ -455,6 +455,7 @@ function MatchStep({ night, picks, setPicks, bonusPicks, setBonusPicks, onBack, 
       {nightMatches.map(m=>(
         <div key={m.id} style={{ ...S.card, borderColor:m.isMain?`${GOLD}40`:BORDER, position:"relative", overflow:"hidden" }}>
           {m.isMain && <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${GOLD},transparent)` }} />}
+          {m.belt && <div style={{ position:"absolute", top:"50%", right:"-5%", transform:"translateY(-50%)", width:"45%", maxWidth:200, opacity:0.12, pointerEvents:"none" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(30%) brightness(1.2)" }} /></div>}
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10, gap:8 }}>
             <div style={{ fontSize:13, letterSpacing:"0.1em", color:m.isMain?GOLD:PURPLE, textTransform:"uppercase", lineHeight:1.4 }}>
               {m.title}{m.note&&<span style={{ color:"#6a6060" }}> · {m.note}</span>}
@@ -607,6 +608,64 @@ function LockedStep() {
 }
 
 // ─── BOARD TAB ───────────────────────────────────────────────────────────────
+function TriviaTicker({ subs }) {
+  const [idx, setIdx] = useState(0);
+  const facts = (() => {
+    if (!subs.length) return [];
+    const items = [];
+
+    // Fastest to lock in (earliest timestamp)
+    const sorted = [...subs].sort((a,b) => a.ts - b.ts);
+    if (sorted.length) items.push(`⚡ First to lock in: ${sorted[0].name}`);
+
+    // Last to finish
+    if (sorted.length > 1) items.push(`🐢 Last to finish their card: ${sorted[sorted.length-1].name}`);
+
+    // Most edits (highest timestamp = most recent edit, but we track by ts)
+    // Since each edit overwrites ts, the person who edited most recently after others
+    const byRecent = [...subs].sort((a,b) => b.ts - a.ts);
+    if (byRecent.length > 1 && byRecent[0].ts !== sorted[sorted.length-1].ts) {
+      items.push(`✏️ Most recent edit: ${byRecent[0].name}`);
+    }
+
+    // Most surprise guesses filled
+    const mostSurprises = [...subs].sort((a,b) => (b.surprises||[]).filter(Boolean).length - (a.surprises||[]).filter(Boolean).length);
+    if (mostSurprises[0] && (mostSurprises[0].surprises||[]).filter(Boolean).length > 0) {
+      items.push(`🔮 Most surprise guesses: ${mostSurprises[0].name} (${(mostSurprises[0].surprises||[]).filter(Boolean).length})`);
+    }
+
+    // Total picks across all players
+    const totalPicks = subs.reduce((a,s) => a + Object.keys(s.picks||{}).filter(k=>s.picks[k]).length, 0);
+    items.push(`📊 ${totalPicks} total match picks across ${subs.length} players`);
+
+    // Player count
+    if (subs.length >= 3) items.push(`🏟️ ${subs.length} competitors entered the ring`);
+
+    return items;
+  })();
+
+  useEffect(() => {
+    if (facts.length <= 1) return;
+    const timer = setInterval(() => setIdx(i => (i + 1) % facts.length), 4000);
+    return () => clearInterval(timer);
+  }, [facts.length]);
+
+  if (!facts.length) return null;
+
+  return (
+    <div style={{ overflow:"hidden", height:28, marginBottom:14, position:"relative" }}>
+      {facts.map((f, i) => (
+        <div key={f} style={{
+          position:"absolute", top:0, left:0, right:0,
+          fontSize:13, color:GOLD, textAlign:"center", fontFamily:"Georgia, serif",
+          opacity:i===idx?1:0, transform:i===idx?"translateY(0)":"translateY(8px)",
+          transition:"all 0.5s ease",
+        }}>{f}</div>
+      ))}
+    </div>
+  );
+}
+
 function SurprisePool({ subs }) {
   // Collect all surprise names, count duplicates
   const counts = {};
@@ -742,6 +801,8 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
           <button key={id} onClick={()=>setView(id)} style={{ flex:1, padding:"14px", fontSize:14, letterSpacing:"0.08em", textTransform:"uppercase", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", background:view===id?`${GOLD}18`:"transparent", color:view===id?GOLD:"#6a6060", borderRight:id==="leaders"?`1px solid rgba(255,255,255,0.06)`:"none" }}>{label}</button>
         ))}
       </div>
+
+      <TriviaTicker subs={subs} />
 
       {subs.length===0&&!loading&&(
         <div style={{ textAlign:"center", padding:"40px 0", color:"#5a5050", fontSize:16 }}>No submissions yet 🎤</div>
