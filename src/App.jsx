@@ -319,7 +319,7 @@ export default function WM42() {
         ))}
       </div>
       {/* Content */}
-      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"16px 16px 60px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"16px 16px 120px" }}>
         <div style={{ maxWidth:620, margin:"0 auto" }}>
           {tab==="pick"  && renderPick()}
           {tab==="board" && <BoardTab subs={subs} results={results} loading={loading} lastRefresh={lastRefresh} onRefresh={()=>fetchBoard()} />}
@@ -376,7 +376,7 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
       <div style={{ fontSize:32, marginBottom:6 }}>🔑</div>
       <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:19 }}>{name.trim()} already has picks</h2>
       <p style={{ color:"#8a8070", fontSize:12, marginBottom:16, lineHeight:1.5 }}>Enter your edit key to modify your picks</p>
-      <input style={{ ...S.input, maxWidth:200, textAlign:"center", margin:"0 auto 14px", display:"block", letterSpacing:"0.2em", fontSize:18, fontWeight:700 }} placeholder="e.g. MTT420" value={keyInput} onChange={e=>setKeyInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&keyInput&&handleKeySubmit()} maxLength={6} />
+      <input style={{ ...S.input, maxWidth:300, textAlign:"center", margin:"0 auto 14px", display:"block", letterSpacing:"0.15em", fontSize:18, fontWeight:700 }} placeholder="e.g. RNLD420" value={keyInput} onChange={e=>setKeyInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&keyInput&&handleKeySubmit()} maxLength={22} />
       {error && <div style={{ color:RED, fontSize:11, marginBottom:10 }}>{error}</div>}
       <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
         <button style={{ background:"transparent", border:`1px solid rgba(255,255,255,0.09)`, borderRadius:4, color:"#908878", cursor:"pointer", fontSize:11, padding:"10px 18px", fontFamily:"Georgia, serif" }} onClick={()=>{ setPhase("name"); setKeyInput(""); setError(""); }}>← Back</button>
@@ -646,7 +646,7 @@ function TriviaTicker({ subs }) {
 
   useEffect(() => {
     if (facts.length <= 1) return;
-    const timer = setInterval(() => setIdx(i => (i + 1) % facts.length), 7000);
+    const timer = setInterval(() => setIdx(i => (i + 1) % facts.length), 5000);
     return () => clearInterval(timer);
   }, [facts.length]);
 
@@ -667,7 +667,6 @@ function TriviaTicker({ subs }) {
 }
 
 function SurprisePool({ subs }) {
-  // Collect all surprise names, count duplicates
   const counts = {};
   subs.forEach(sub => {
     (sub.surprises || []).filter(Boolean).forEach(g => {
@@ -676,44 +675,100 @@ function SurprisePool({ subs }) {
     });
   });
   const names = Object.entries(counts);
-  if (!names.length) return null;
-  const maxCount = Math.max(...names.map(([,c])=>c));
+  const maxCount = Math.max(1, ...names.map(([,c])=>c));
+  const containerRef = useRef(null);
+  const particlesRef = useRef([]);
+  const rafRef = useRef(null);
+  const [positions, setPositions] = useState([]);
 
-  // Generate stable random positions per name
-  const positions = names.map(([name], i) => ({
-    left: ((i * 37 + 13) % 80) + 5,
-    top: ((i * 53 + 7) % 75) + 5,
-    delay: (i * 0.7) % 4,
-    dur: 3 + (i % 3),
-  }));
+  useEffect(() => {
+    if (!names.length) return;
+    const W = 300, H = 220, PAD = 16;
+    // Init particles with random positions and slow velocities
+    particlesRef.current = names.map(([name, count], i) => {
+      const fontSize = Math.round(13 + (count / maxCount) * 10);
+      const estW = name.length * fontSize * 0.55;
+      const estH = fontSize * 1.4;
+      return {
+        x: PAD + Math.random() * (W - estW - PAD * 2),
+        y: PAD + 20 + Math.random() * (H - estH - PAD * 2 - 20),
+        vx: (0.15 + Math.random() * 0.25) * (Math.random() > 0.5 ? 1 : -1),
+        vy: (0.1 + Math.random() * 0.2) * (Math.random() > 0.5 ? 1 : -1),
+        w: estW, h: estH,
+      };
+    });
+
+    let last = 0;
+    function tick(ts) {
+      if (!last) last = ts;
+      const dt = Math.min(ts - last, 32);
+      last = ts;
+      const el = containerRef.current;
+      const cW = el ? el.offsetWidth : W;
+      const cH = H;
+
+      particlesRef.current.forEach((p, i) => {
+        p.x += p.vx * dt * 0.06;
+        p.y += p.vy * dt * 0.06;
+        // Bounce off walls
+        if (p.x < PAD) { p.x = PAD; p.vx = Math.abs(p.vx); }
+        if (p.x + p.w > cW - PAD) { p.x = cW - PAD - p.w; p.vx = -Math.abs(p.vx); }
+        if (p.y < PAD + 20) { p.y = PAD + 20; p.vy = Math.abs(p.vy); }
+        if (p.y + p.h > cH - PAD) { p.y = cH - PAD - p.h; p.vy = -Math.abs(p.vy); }
+        // Nudge away from other particles (soft collision)
+        for (let j = i + 1; j < particlesRef.current.length; j++) {
+          const q = particlesRef.current[j];
+          const dx = (p.x + p.w/2) - (q.x + q.w/2);
+          const dy = (p.y + p.h/2) - (q.y + q.h/2);
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          const minDist = (p.w + q.w) * 0.4;
+          if (dist < minDist && dist > 0) {
+            const nx = dx/dist, ny = dy/dist;
+            const push = 0.02;
+            p.vx += nx * push; p.vy += ny * push;
+            q.vx -= nx * push; q.vy -= ny * push;
+            // Clamp speeds
+            const maxV = 0.4;
+            p.vx = Math.max(-maxV, Math.min(maxV, p.vx));
+            p.vy = Math.max(-maxV, Math.min(maxV, p.vy));
+            q.vx = Math.max(-maxV, Math.min(maxV, q.vx));
+            q.vy = Math.max(-maxV, Math.min(maxV, q.vy));
+          }
+        }
+      });
+
+      setPositions(particlesRef.current.map(p => ({ x: p.x, y: p.y })));
+      rafRef.current = requestAnimationFrame(tick);
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [names.length]);
+
+  if (!names.length) return null;
 
   return (
-    <div style={{ ...S.card, borderColor:`${PURPLE}30`, marginBottom:18, position:"relative", overflow:"hidden", minHeight:220 }}>
+    <div ref={containerRef} style={{ ...S.card, borderColor:`${PURPLE}30`, marginBottom:18, position:"relative", overflow:"hidden", height:220 }}>
       <div style={{ ...S.lbl, color:PURPLE, marginBottom:0, position:"relative", zIndex:2 }}>Surprise Pool</div>
-      <div style={{ position:"relative", height:200, overflow:"hidden" }}>
-        {names.map(([name, count], i) => {
-          const scale = 0.8 + (count / maxCount) * 0.7;
-          const opacity = 0.5 + (count / maxCount) * 0.5;
-          const p = positions[i];
-          return (
-            <div key={name} style={{
-              position:"absolute",
-              left:`${p.left}%`, top:`${p.top}%`,
-              transform:`translate(-50%,-50%) scale(${scale})`,
-              fontSize: Math.round(13 + (count / maxCount) * 10),
-              fontWeight: count >= maxCount ? 800 : count > 1 ? 700 : 400,
-              color: count >= maxCount ? GOLD : `rgba(213,200,172,${opacity})`,
-              fontFamily:"Georgia, serif",
-              whiteSpace:"nowrap",
-              animation:`float ${p.dur}s ease-in-out ${p.delay}s infinite alternate`,
-              textShadow: count > 1 ? `0 0 ${count*4}px rgba(200,160,40,0.2)` : "none",
-            }}>
-              {name}{count > 1 && <span style={{ fontSize:10, color:PURPLE, marginLeft:4, verticalAlign:"super" }}>×{count}</span>}
-            </div>
-          );
-        })}
-      </div>
-      <style>{`@keyframes float { 0% { transform: translate(-50%,-50%) translateY(0); } 100% { transform: translate(-50%,-50%) translateY(-8px); } }`}</style>
+      {names.map(([name, count], i) => {
+        const pos = positions[i] || { x: 20, y: 40 };
+        const opacity = 0.5 + (count / maxCount) * 0.5;
+        return (
+          <div key={name} style={{
+            position:"absolute",
+            left: pos.x, top: pos.y,
+            fontSize: Math.round(13 + (count / maxCount) * 10),
+            fontWeight: count >= maxCount ? 800 : count > 1 ? 700 : 400,
+            color: count >= maxCount ? GOLD : `rgba(224,212,184,${opacity})`,
+            fontFamily:"Georgia, serif",
+            whiteSpace:"nowrap",
+            textShadow: count > 1 ? `0 0 ${count*5}px rgba(200,160,40,0.25)` : "none",
+            transition:"none",
+            willChange:"left,top",
+          }}>
+            {name}{count > 1 && <span style={{ fontSize:10, color:PURPLE, marginLeft:4, verticalAlign:"super" }}>×{count}</span>}
+          </div>
+        );
+      })}
     </div>
   );
 }
