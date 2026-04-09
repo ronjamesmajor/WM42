@@ -203,7 +203,6 @@ export default function WM42() {
   const [adminPass,     setAdminPass]     = useState("");
   const [editKey,       setEditKey]       = useState("");
   const contentRef = useRef(null);
-  const [heroCollapsed, setHeroCollapsed] = useState(false);
 
   const fetchBoard = useCallback(async (triggerAI=false) => {
     setLoading(true);
@@ -219,14 +218,7 @@ export default function WM42() {
 
   useEffect(() => {
     if (contentRef.current) contentRef.current.scrollTo(0, 0);
-    setHeroCollapsed(false);
   }, [step, tab]);
-
-  function handleContentScroll(e) {
-    const top = e.target.scrollTop;
-    if (top > 30 && !heroCollapsed) setHeroCollapsed(true);
-    if (top === 0 && heroCollapsed) setHeroCollapsed(false);
-  }
 
   useEffect(() => {
     if (tab==="board") {
@@ -313,11 +305,11 @@ export default function WM42() {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:"radial-gradient(ellipse at 20% 10%, #1a1228 0%, #0c0b12 55%, #0f0d18 100%)", color:"#f5efe5", fontFamily:"Georgia, serif", overflow:"hidden" }}>
-      {/* Header — collapses on scroll */}
-      <div style={{ flexShrink:0, textAlign:"center", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.3)", overflow:"hidden", maxHeight:heroCollapsed?44:300, transition:"max-height 0.4s ease" }}>
-        {!heroCollapsed && <img src="./guesslemania.png" alt="Guesslemania 2026" style={{ width:"100%", objectFit:"contain", display:"block" }} />}
-        <div style={{ padding:heroCollapsed?"10px 16px":"8px 16px 10px", background:heroCollapsed?"transparent":"linear-gradient(180deg, rgba(12,11,18,0.9) 0%, rgba(12,11,18,0.6) 100%)", marginTop:heroCollapsed?0:-1 }}>
-          <div style={{ fontSize:heroCollapsed?11:12, letterSpacing:"0.15em", color:"#908878", textTransform:"uppercase" }}>{heroCollapsed?"Guesslemania 2026":"April 18–19 · Allegiant Stadium · Las Vegas · Max "+maxScore()+" pts"}</div>
+      {/* Header */}
+      <div style={{ flexShrink:0, textAlign:"center", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.3)", overflow:"hidden" }}>
+        <img src="./guesslemania.png" alt="Guesslemania 2026" style={{ width:"100%", height:100, objectFit:"cover", objectPosition:"center 35%", display:"block" }} />
+        <div style={{ padding:"8px 16px 10px", background:"linear-gradient(180deg, rgba(12,11,18,0.9) 0%, rgba(12,11,18,0.6) 100%)", marginTop:-1 }}>
+          <div style={{ fontSize:12, letterSpacing:"0.15em", color:"#908878", textTransform:"uppercase" }}>April 18–19 · Allegiant Stadium · Las Vegas · Max {maxScore()} pts</div>
         </div>
       </div>
       {/* Progress */}
@@ -333,7 +325,7 @@ export default function WM42() {
         ))}
       </div>
       {/* Content */}
-      <div ref={contentRef} onScroll={handleContentScroll} style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"16px 16px 120px" }}>
+      <div ref={contentRef} style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"16px 16px 120px" }}>
         <div style={{ maxWidth:620, margin:"0 auto" }}>
           {tab==="pick"  && renderPick()}
           {tab==="board" && <BoardTab subs={subs} results={results} loading={loading} lastRefresh={lastRefresh} onRefresh={()=>fetchBoard()} />}
