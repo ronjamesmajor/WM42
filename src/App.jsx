@@ -202,6 +202,7 @@ export default function WM42() {
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPass,     setAdminPass]     = useState("");
   const [editKey,       setEditKey]       = useState("");
+  const contentRef = useRef(null);
 
   const fetchBoard = useCallback(async (triggerAI=false) => {
     setLoading(true);
@@ -214,6 +215,10 @@ export default function WM42() {
     setLastRefresh(new Date());
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (contentRef.current) contentRef.current.scrollTo(0, 0);
+  }, [step, tab]);
 
   useEffect(() => {
     if (tab==="board") {
@@ -319,7 +324,7 @@ export default function WM42() {
         ))}
       </div>
       {/* Content */}
-      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"16px 16px 120px" }}>
+      <div ref={contentRef} style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"16px 16px 120px" }}>
         <div style={{ maxWidth:620, margin:"0 auto" }}>
           {tab==="pick"  && renderPick()}
           {tab==="board" && <BoardTab subs={subs} results={results} loading={loading} lastRefresh={lastRefresh} onRefresh={()=>fetchBoard()} />}
@@ -448,14 +453,27 @@ function BonusQuestion({ bonus, value, onChange }) {
 
 function MatchStep({ night, picks, setPicks, bonusPicks, setBonusPicks, onBack, onNext }) {
   const nightMatches = matches.filter(m=>m.night===night);
-  const allPicked = nightMatches.every(m=>picks[m.id]);
+  const [warning, setWarning] = useState(null);
+
+  function handleNext() {
+    const missing = nightMatches.find(m => !picks[m.id]);
+    if (missing) {
+      setWarning(missing.id);
+      const el = document.getElementById(`match-${missing.id}`);
+      if (el) el.scrollIntoView({ behavior:"smooth", block:"center" });
+      setTimeout(() => setWarning(null), 3000);
+      return;
+    }
+    onNext();
+  }
+
   return (
     <div>
       <NightHdr night={night} />
       {nightMatches.map(m=>(
-        <div key={m.id} style={{ ...S.card, borderColor:m.isMain?`${GOLD}40`:BORDER, position:"relative", overflow:"hidden" }}>
+        <div key={m.id} id={`match-${m.id}`} style={{ ...S.card, borderColor:warning===m.id?`${RED}80`:m.isMain?`${GOLD}40`:BORDER, position:"relative", overflow:"hidden", transition:"border-color 0.3s" }}>
           {m.isMain && <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${GOLD},transparent)` }} />}
-          {m.belt && <div style={{ position:"absolute", top:-12, left:-12, width:130, opacity:0.25, pointerEvents:"none", transform:"rotate(-20deg)", transformOrigin:"center center" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(15%) brightness(1.4)" }} /></div>}
+          {m.belt && <div style={{ position:"absolute", top:-12, right:-12, width:130, opacity:0.25, pointerEvents:"none", transform:"rotate(20deg)", transformOrigin:"center center" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(15%) brightness(1.4)" }} /></div>}
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10, gap:8 }}>
             <div style={{ fontSize:13, letterSpacing:"0.1em", color:m.isMain?GOLD:PURPLE, textTransform:"uppercase", lineHeight:1.4 }}>
               {m.title}{m.note&&<span style={{ color:"#6a6060" }}> · {m.note}</span>}
@@ -489,7 +507,12 @@ function MatchStep({ night, picks, setPicks, bonusPicks, setBonusPicks, onBack, 
           ))}
         </div>
       ))}
-      <NavRow onBack={onBack} onNext={onNext} nextDisabled={!allPicked} nextLabel={`Night ${night} done →`} />
+      {warning && (
+        <div style={{ background:`${RED}18`, border:`1px solid ${RED}40`, borderRadius:10, padding:"12px 16px", marginTop:10, textAlign:"center", fontSize:14, color:RED }}>
+          Pick a winner above to continue
+        </div>
+      )}
+      <NavRow onBack={onBack} onNext={handleNext} nextDisabled={false} nextLabel={`Night ${night} done →`} />
     </div>
   );
 }
@@ -919,7 +942,7 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
           {/* Matches + Bonuses */}
           {matches.map(m=>(
             <div key={m.id} style={{ ...S.card, marginBottom:10, position:"relative", overflow:"hidden" }}>
-              {m.belt && <div style={{ position:"absolute", top:-12, left:-12, width:130, opacity:0.25, pointerEvents:"none", transform:"rotate(-20deg)" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(15%) brightness(1.4)" }} /></div>}
+              {m.belt && <div style={{ position:"absolute", top:-12, right:-12, width:130, opacity:0.25, pointerEvents:"none", transform:"rotate(20deg)" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(15%) brightness(1.4)" }} /></div>}
               <div style={{ fontSize:12, letterSpacing:"0.12em", color:PURPLE, textTransform:"uppercase", marginBottom:10, position:"relative" }}>{m.title}</div>
               {m.competitors.map(c=>{
                 const p=pct(m.id,c.name); const isW=results?.picks?.[m.id]===c.name;
@@ -1017,7 +1040,7 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
         <div style={{ fontSize:13, color:"#8a8070", marginBottom:14 }}>Tap to select · tap again to deselect · saves instantly</div>
         {matches.map(m=>(
           <div key={m.id} style={{ marginBottom:18, position:"relative", overflow:"hidden", padding:"12px", background:"rgba(255,255,255,0.015)", borderRadius:10 }}>
-            {m.belt && <div style={{ position:"absolute", top:-10, left:-10, width:110, opacity:0.2, pointerEvents:"none", transform:"rotate(-20deg)" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(15%) brightness(1.4)" }} /></div>}
+            {m.belt && <div style={{ position:"absolute", top:-10, right:-10, width:110, opacity:0.2, pointerEvents:"none", transform:"rotate(20deg)" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(15%) brightness(1.4)" }} /></div>}
             <div style={{ fontSize:13, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7, position:"relative" }}>{m.title}</div>
             <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:5 }}>
               {m.competitors.map(c=>{
