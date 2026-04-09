@@ -28,7 +28,7 @@ const matches = [
   ], bonuses:[
     { id:"b_m10_a", label:"Who gets the pin?", type:"select", options:["Bayley","Lyra Valkyrie","Nikki Bella","Brie Bella","Nia Jax","Lash Legend","Alexa Bliss","Charlotte Flair"] },
   ]},
-  { id:"m6",  night:1, title:"WWE Women's Intercontinental Championship", belt:"./belts/WWE_Women's_Intercontinental_Championship.jpeg", competitors:[
+  { id:"m6",  night:1, title:"WWE Women's Intercontinental Championship", belt:"./belts/WWE_Women's_Intercontinental_Championship.png", competitors:[
     { name:"Becky Lynch", role:"Challenger" },
     { name:"AJ Lee",      role:"Champion"   },
   ], bonuses:[
@@ -40,7 +40,7 @@ const matches = [
   ], bonuses:[
     { id:"b_m12_a", label:"Seth Rollins entrance length?", type:"overunder", line:"O/U 2 min 15 sec" },
   ]},
-  { id:"m3",  night:1, title:"WWE Women's World Championship", belt:"./belts/Women's_World_Championship_(WWE)_2023.jpeg", competitors:[
+  { id:"m3",  night:1, title:"WWE Women's World Championship", belt:"./belts/Women's_World_Championship_(WWE)_2023.png", competitors:[
     { name:"Stephanie Vaquer", role:"Champion"   },
     { name:"Liv Morgan",       role:"Challenger" },
   ], bonuses:[
@@ -78,7 +78,7 @@ const matches = [
   ], bonuses:[
     { id:"b_m7_a", label:"Pinfall attempts?", type:"overunder", line:"O/U 5.5" },
   ]},
-  { id:"m2",  night:2, title:"WWE Women's Championship", belt:"./belts/WWE_Women's_Championship_(2023).jpeg", competitors:[
+  { id:"m2",  night:2, title:"WWE Women's Championship", belt:"./belts/WWE_Women's_Championship_(2023).png", competitors:[
     { name:"Jade Cargill", role:"Champion"   },
     { name:"Rhea Ripley",  role:"Challenger" },
   ], bonuses:[
@@ -455,7 +455,7 @@ function MatchStep({ night, picks, setPicks, bonusPicks, setBonusPicks, onBack, 
       {nightMatches.map(m=>(
         <div key={m.id} style={{ ...S.card, borderColor:m.isMain?`${GOLD}40`:BORDER, position:"relative", overflow:"hidden" }}>
           {m.isMain && <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${GOLD},transparent)` }} />}
-          {m.belt && <div style={{ position:"absolute", top:-10, left:-10, width:100, opacity:0.18, pointerEvents:"none", transform:"rotate(-20deg)", transformOrigin:"center center" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(20%) brightness(1.3)" }} /></div>}
+          {m.belt && <div style={{ position:"absolute", top:-12, left:-12, width:130, opacity:0.25, pointerEvents:"none", transform:"rotate(-20deg)", transformOrigin:"center center" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(15%) brightness(1.4)" }} /></div>}
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10, gap:8 }}>
             <div style={{ fontSize:13, letterSpacing:"0.1em", color:m.isMain?GOLD:PURPLE, textTransform:"uppercase", lineHeight:1.4 }}>
               {m.title}{m.note&&<span style={{ color:"#6a6060" }}> · {m.note}</span>}
@@ -863,8 +863,9 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
 
           {/* Matches + Bonuses */}
           {matches.map(m=>(
-            <div key={m.id} style={{ ...S.card, marginBottom:10 }}>
-              <div style={{ fontSize:12, letterSpacing:"0.12em", color:PURPLE, textTransform:"uppercase", marginBottom:10 }}>{m.title}</div>
+            <div key={m.id} style={{ ...S.card, marginBottom:10, position:"relative", overflow:"hidden" }}>
+              {m.belt && <div style={{ position:"absolute", top:-12, left:-12, width:130, opacity:0.25, pointerEvents:"none", transform:"rotate(-20deg)" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(15%) brightness(1.4)" }} /></div>}
+              <div style={{ fontSize:12, letterSpacing:"0.12em", color:PURPLE, textTransform:"uppercase", marginBottom:10, position:"relative" }}>{m.title}</div>
               {m.competitors.map(c=>{
                 const p=pct(m.id,c.name); const isW=results?.picks?.[m.id]===c.name;
                 return (
@@ -960,8 +961,9 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
         <div style={{ fontSize:14, letterSpacing:"0.18em", color:GOLD, textTransform:"uppercase", marginBottom:14 }}>Match Results</div>
         <div style={{ fontSize:13, color:"#8a8070", marginBottom:14 }}>Tap to select · tap again to deselect · saves instantly</div>
         {matches.map(m=>(
-          <div key={m.id} style={{ marginBottom:18 }}>
-            <div style={{ fontSize:13, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7 }}>{m.title}</div>
+          <div key={m.id} style={{ marginBottom:18, position:"relative", overflow:"hidden", padding:"12px", background:"rgba(255,255,255,0.015)", borderRadius:10 }}>
+            {m.belt && <div style={{ position:"absolute", top:-10, left:-10, width:110, opacity:0.2, pointerEvents:"none", transform:"rotate(-20deg)" }}><img src={m.belt} alt="" style={{ width:"100%", height:"auto", filter:"grayscale(15%) brightness(1.4)" }} /></div>}
+            <div style={{ fontSize:13, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7, position:"relative" }}>{m.title}</div>
             <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:5 }}>
               {m.competitors.map(c=>{
                 const sel = curPicks[m.id]===c.name;
