@@ -646,7 +646,7 @@ function TriviaTicker({ subs }) {
 
   useEffect(() => {
     if (facts.length <= 1) return;
-    const timer = setInterval(() => setIdx(i => (i + 1) % facts.length), 10000);
+    const timer = setInterval(() => setIdx(i => (i + 1) % facts.length), 7000);
     return () => clearInterval(timer);
   }, [facts.length]);
 
@@ -769,14 +769,13 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
     <div>
       {/* Trophy Banner */}
       {gameOver && topScore>0 && (
-        <div style={{ background:"linear-gradient(135deg,rgba(200,160,40,0.15),rgba(200,160,40,0.05))", border:`1px solid ${GOLD}60`, borderRadius:10, padding:"18px 16px", textAlign:"center", marginBottom:16, position:"relative", overflow:"hidden" }}>
+        <div style={{ background:"linear-gradient(135deg,rgba(200,160,40,0.12),rgba(200,160,40,0.03))", border:`1px solid ${GOLD}50`, borderRadius:14, padding:"24px 16px 20px", textAlign:"center", marginBottom:18, position:"relative", overflow:"hidden" }}>
           <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${GOLD},transparent)` }} />
-          <div style={{ fontSize:48, marginBottom:6, filter:"drop-shadow(0 0 12px gold)" }}>🏆</div>
-          <div style={{ fontSize:10, letterSpacing:"0.3em", color:GOLD, textTransform:"uppercase", marginBottom:6 }}>WrestleMania 42 Pick 'Em Champion{topPlayers.length>1?"s":""}</div>
+          <img src="./trophy/trophy.png" alt="World Guessing Champion 2026" style={{ width:180, height:180, objectFit:"contain", margin:"0 auto 12px", display:"block", filter:"drop-shadow(0 0 20px rgba(200,160,40,0.4))" }} />
           {topPlayers.map(p=>(
-            <div key={p.name} style={{ fontSize:26, fontWeight:900, color:GOLD2, lineHeight:1.1 }}>{p.name}</div>
+            <div key={p.name} style={{ fontSize:28, fontWeight:900, color:GOLD2, lineHeight:1.1 }}>{p.name}</div>
           ))}
-          <div style={{ fontSize:13, color:GOLD, marginTop:6, opacity:0.8 }}>{topScore} / {maxScore()} pts</div>
+          <div style={{ fontSize:14, color:GOLD, marginTop:8, opacity:0.8 }}>{topScore} / {maxScore()} pts</div>
         </div>
       )}
 
@@ -785,7 +784,7 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
         <div style={{ background:"rgba(0,0,0,0.3)", border:`1px solid rgba(255,255,255,0.06)`, borderRadius:8, padding:"14px 16px", textAlign:"center", marginBottom:14 }}>
           <div style={{ fontSize:36, marginBottom:4, filter:"brightness(0.3) blur(1px)" }}>🏆</div>
           <div style={{ fontSize:10, letterSpacing:"0.2em", color:"#6a6060", textTransform:"uppercase", marginBottom:4 }}>Currently Leading</div>
-          <div style={{ fontSize:18, fontWeight:700, color:"#e0d4b8", filter:"blur(4px)", userSelect:"none" }}>{scored[0]?.name}</div>
+          <div style={{ fontSize:18, fontWeight:700, color:"#e0d4b8", filter:"blur(10px)", userSelect:"none", WebkitUserSelect:"none" }}>{scored[0]?.name}</div>
           <div style={{ fontSize:11, color:"#6a6060", marginTop:4 }}>Trophy revealed when Admin marks the show complete</div>
         </div>
       )}
