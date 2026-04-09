@@ -21,12 +21,12 @@ const matches = [
   ]},
   // Main Card
   { id:"m10", night:1, title:"WWE Women's Tag Team Championship", note:"Fatal 4-Way", belt:"./belts/WWE_Women's_Tag_Team_Championship.png", competitors:[
-    { name:"Bayley & Lyra Valkyrie",        role:"" },
+    { name:"Bayley & Lyra Valkyria",        role:"" },
     { name:"The Bella Twins",               role:"" },
     { name:"Nia Jax & Lash Legend",         role:"Champions" },
     { name:"Alexa Bliss & Charlotte Flair", role:"" },
   ], bonuses:[
-    { id:"b_m10_a", label:"Who gets the pin?", type:"select", options:["Bayley","Lyra Valkyrie","Nikki Bella","Brie Bella","Nia Jax","Lash Legend","Alexa Bliss","Charlotte Flair"] },
+    { id:"b_m10_a", label:"Who gets the pin?", type:"select", options:["Bayley","Lyra Valkyria","Nikki Bella","Brie Bella","Nia Jax","Lash Legend","Alexa Bliss","Charlotte Flair"] },
   ]},
   { id:"m6",  night:1, title:"WWE Women's Intercontinental Championship", belt:"./belts/WWE_Women's_Intercontinental_Championship.png", competitors:[
     { name:"Becky Lynch", role:"Challenger" },
