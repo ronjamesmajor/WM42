@@ -76,7 +76,7 @@ const matches = [
     { name:"Sami Zayn",       role:"Champion"   },
     { name:"Trick Williams",  role:"Challenger" },
   ], bonuses:[
-    { id:"b_m7_a", label:"Pinfall attempts?", type:"overunder", line:"O/U 5.5" },
+    { id:"b_m7_a", label:"Lil Yachty makes an appearance?", type:"yesno" },
   ]},
   { id:"m2",  night:2, title:"WWE Women's Championship", belt:"./belts/WWE_Women's_Championship_(2023).png", competitors:[
     { name:"Jade Cargill", role:"Champion"   },
@@ -537,9 +537,13 @@ function BonusStep({ endPicks, setEndPicks, surprises, setSurprises, onBack, onN
       ))}
 
       <div style={S.card}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
           <div style={{ fontSize:14, color:"#e0d4b8" }}>Surprise Appearances</div>
           <div style={{ ...S.ptsBadge(SURPRISE_PTS, PURPLE) }}>±{SURPRISE_PTS} pts each</div>
+        </div>
+        <div style={{ fontSize:12, color:"#908878", lineHeight:1.6, marginBottom:14 }}>
+          <div style={{ marginBottom:8 }}><strong style={{ color:"#e0d4b8" }}>Returns:</strong> A Superstar who has been absent from regular programming for 3 or more months, or a Legend who does not regularly appear.</div>
+          <div><strong style={{ color:"#e0d4b8" }}>Debuts:</strong> A Superstar from the indies, TNA, AEW, New Japan, any regular sport, any combat sport, films, television or music not otherwise advertised or part of regular programming.</div>
         </div>
         {Array.from({ length: SURPRISE_SLOTS }).map((_, i) => (
           <input key={i} style={{ ...S.input, marginBottom:8 }} placeholder={`Surprise #${i+1} (optional)`} value={surprises[i] || ""} onChange={e => {
