@@ -306,10 +306,11 @@ export default function WM42() {
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:"radial-gradient(ellipse at 20% 10%, #1a1228 0%, #0c0b12 55%, #0f0d18 100%)", color:"#f5efe5", fontFamily:"Georgia, serif", overflow:"hidden" }}>
       {/* Header */}
-      <div style={{ flexShrink:0, textAlign:"center", padding:"18px 16px 14px", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.3)" }}>
-        <div style={{ fontSize:11, letterSpacing:"0.3em", color:"#908878", textTransform:"uppercase", marginBottom:5 }}>April 18–19 · Las Vegas · Allegiant Stadium</div>
-        <h1 style={{ fontSize:"clamp(26px,7vw,40px)", fontWeight:900, background:`linear-gradient(135deg,#f5e06a,${GOLD},#e8d060)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:0, lineHeight:1, textTransform:"uppercase", letterSpacing:"-0.02em" }}>WrestleMania 42</h1>
-        <div style={{ fontSize:12, letterSpacing:"0.12em", color:"#6a6050", textTransform:"uppercase", marginTop:6 }}>Pick 'Em · Max {maxScore()} pts</div>
+      <div style={{ flexShrink:0, textAlign:"center", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.3)", overflow:"hidden" }}>
+        <img src="./guesslemania.png" alt="Guesslemania 2026" style={{ width:"100%", maxHeight:160, objectFit:"cover", objectPosition:"center 40%", display:"block" }} />
+        <div style={{ padding:"8px 16px 10px", background:"linear-gradient(180deg, rgba(12,11,18,0.9) 0%, rgba(12,11,18,0.6) 100%)", marginTop:-1 }}>
+          <div style={{ fontSize:12, letterSpacing:"0.15em", color:"#908878", textTransform:"uppercase" }}>April 18–19 · Allegiant Stadium · Las Vegas · Max {maxScore()} pts</div>
+        </div>
       </div>
       {/* Progress */}
       {tab==="pick" && step<STEPS && (
