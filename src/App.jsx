@@ -20,7 +20,7 @@ const matches = [
   { id:"m10", night:1, title:"WWE Women's Tag Team Championship", note:"Fatal 4-Way", competitors:[
     { name:"Bayley & Lyra Valkyrie",        role:"" },
     { name:"The Bella Twins",               role:"" },
-    { name:"Nia Jax & Lash Legend",         role:"" },
+    { name:"Nia Jax & Lash Legend",         role:"Champions" },
     { name:"Alexa Bliss & Charlotte Flair", role:"" },
   ]},
   { id:"m6",  night:1, title:"WWE Women's Intercontinental Championship", competitors:[
@@ -32,12 +32,12 @@ const matches = [
     { name:"Seth Rollins", role:"" },
   ]},
   { id:"m3",  night:1, title:"WWE Women's World Championship", competitors:[
-    { name:"Liv Morgan",       role:"Champion"   },
-    { name:"Stephanie Vaquer", role:"Challenger" },
+    { name:"Stephanie Vaquer", role:"Champion"   },
+    { name:"Liv Morgan",       role:"Challenger" },
   ]},
-  { id:"m1",  night:1, isMain:true, title:"Undisputed WWE Championship", note:"Pat McAfee in Orton's corner", competitors:[
+  { id:"m1",  night:1, isMain:true, title:"Undisputed WWE Championship", competitors:[
     { name:"Cody Rhodes",  role:"Champion"   },
-    { name:"Randy Orton",  role:"Challenger" },
+    { name:"Randy Orton",  role:"Challenger · w/ Pat MAGAFee" },
   ]},
   // ── NIGHT 2 (Sunday, April 19) ───────────────────────────────────────────
   // ESPN2 First Hour
@@ -182,11 +182,11 @@ function calcScore(sub, results, allSubs=[]) {
 
 // ─── SHARED STYLES ───────────────────────────────────────────────────────────
 const S = {
-  input: { width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.05)", border:`1px solid ${GOLD}40`, borderRadius:4, color:"#f0e6d3", fontSize:14, padding:"10px 14px", outline:"none", fontFamily:"Georgia, serif" },
-  btn: (color=GOLD, disabled=false) => ({ background:disabled?"rgba(255,255,255,0.04)":`linear-gradient(135deg,${color}cc,${color})`, border:"none", borderRadius:4, color:disabled?"#4a4040":(color===GOLD?"#0c0b12":"#fff"), cursor:disabled?"not-allowed":"pointer", fontSize:12, fontWeight:700, letterSpacing:"0.12em", padding:"11px 24px", textTransform:"uppercase", fontFamily:"Georgia, serif", transition:"all 0.2s" }),
-  card: { background:BG, border:`1px solid ${BORDER}`, borderRadius:8, padding:"12px 14px", marginBottom:10 },
-  lbl:  { fontSize:10, letterSpacing:"0.25em", color:GOLD, textTransform:"uppercase", marginBottom:8 },
-  ptsBadge: (pts, color) => ({ fontSize:9, letterSpacing:"0.08em", color:color||GOLD, background:`${color||GOLD}18`, padding:"2px 7px", borderRadius:3, fontWeight:700, whiteSpace:"nowrap" }),
+  input: { width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.06)", border:`1px solid ${GOLD}40`, borderRadius:8, color:"#f0e6d3", fontSize:16, padding:"14px 16px", outline:"none", fontFamily:"Georgia, serif" },
+  btn: (color=GOLD, disabled=false) => ({ background:disabled?"rgba(255,255,255,0.04)":`linear-gradient(135deg,${color}cc,${color})`, border:"none", borderRadius:8, color:disabled?"#4a4040":(color===GOLD?"#0c0b12":"#fff"), cursor:disabled?"not-allowed":"pointer", fontSize:14, fontWeight:700, letterSpacing:"0.1em", padding:"14px 28px", textTransform:"uppercase", fontFamily:"Georgia, serif", transition:"all 0.15s" }),
+  card: { background:BG, border:`1px solid ${BORDER}`, borderRadius:12, padding:"16px 16px", marginBottom:14 },
+  lbl:  { fontSize:12, letterSpacing:"0.2em", color:GOLD, textTransform:"uppercase", marginBottom:10 },
+  ptsBadge: (pts, color) => ({ fontSize:11, letterSpacing:"0.06em", color:color||GOLD, background:`${color||GOLD}18`, padding:"3px 9px", borderRadius:4, fontWeight:700, whiteSpace:"nowrap" }),
 };
 
 // ─── ROOT ────────────────────────────────────────────────────────────────────
@@ -306,10 +306,10 @@ export default function WM42() {
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:"radial-gradient(ellipse at 20% 10%, #1a1228 0%, #0c0b12 55%, #0f0d18 100%)", color:"#f0e6d3", fontFamily:"Georgia, serif", overflow:"hidden" }}>
       {/* Header */}
-      <div style={{ flexShrink:0, textAlign:"center", padding:"12px 16px 10px", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.2)" }}>
-        <div style={{ fontSize:9, letterSpacing:"0.3em", color:"#6a5f50", textTransform:"uppercase", marginBottom:3 }}>April 18–19 · Las Vegas · Allegiant Stadium</div>
-        <h1 style={{ fontSize:"clamp(20px,5vw,34px)", fontWeight:900, background:`linear-gradient(135deg,#f5e06a,${GOLD},#e8d060)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:0, lineHeight:1, textTransform:"uppercase", letterSpacing:"-0.02em" }}>WrestleMania 42</h1>
-        <div style={{ fontSize:9, letterSpacing:"0.18em", color:"#4a4030", textTransform:"uppercase", marginTop:3 }}>Pick 'Em · Max {maxScore()} pts</div>
+      <div style={{ flexShrink:0, textAlign:"center", padding:"16px 16px 12px", borderBottom:"1px solid rgba(200,160,40,0.15)", background:"rgba(0,0,0,0.25)" }}>
+        <div style={{ fontSize:10, letterSpacing:"0.3em", color:"#6a5f50", textTransform:"uppercase", marginBottom:4 }}>April 18–19 · Las Vegas · Allegiant Stadium</div>
+        <h1 style={{ fontSize:"clamp(24px,6vw,38px)", fontWeight:900, background:`linear-gradient(135deg,#f5e06a,${GOLD},#e8d060)`, WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:0, lineHeight:1, textTransform:"uppercase", letterSpacing:"-0.02em" }}>WrestleMania 42</h1>
+        <div style={{ fontSize:11, letterSpacing:"0.15em", color:"#4a4030", textTransform:"uppercase", marginTop:5 }}>Pick 'Em · Max {maxScore()} pts</div>
       </div>
       {/* Progress */}
       {tab==="pick" && step<STEPS && (
@@ -320,11 +320,11 @@ export default function WM42() {
       {/* Tabs */}
       <div style={{ flexShrink:0, display:"flex", background:"rgba(0,0,0,0.35)", borderBottom:`1px solid ${BORDER}` }}>
         {[["pick","📋 Pick 'Em"],["board","📊 Live Board"],["admin","🔐 Admin"]].map(([id,label])=>(
-          <button key={id} onClick={()=>setTab(id)} style={{ flex:1, padding:"10px 4px", fontSize:9, letterSpacing:"0.15em", textTransform:"uppercase", textAlign:"center", cursor:"pointer", border:"none", background:"transparent", color:tab===id?GOLD:"#4a4040", borderBottom:tab===id?`2px solid ${GOLD}`:"2px solid transparent", fontFamily:"Georgia, serif" }}>{label}</button>
+          <button key={id} onClick={()=>setTab(id)} style={{ flex:1, padding:"14px 4px", fontSize:11, letterSpacing:"0.12em", textTransform:"uppercase", textAlign:"center", cursor:"pointer", border:"none", background:"transparent", color:tab===id?GOLD:"#4a4040", borderBottom:tab===id?`2px solid ${GOLD}`:"2px solid transparent", fontFamily:"Georgia, serif", transition:"color 0.15s" }}>{label}</button>
         ))}
       </div>
       {/* Content */}
-      <div style={{ flex:1, overflowY:"auto", padding:"14px 12px 40px" }}>
+      <div style={{ flex:1, overflowY:"auto", WebkitOverflowScrolling:"touch", padding:"16px 16px 60px" }}>
         <div style={{ maxWidth:620, margin:"0 auto" }}>
           {tab==="pick"  && renderPick()}
           {tab==="board" && <BoardTab subs={subs} results={results} loading={loading} lastRefresh={lastRefresh} onRefresh={()=>fetchBoard()} />}
@@ -427,19 +427,19 @@ function MatchStep({ night, picks, setPicks, onBack, onNext }) {
         <div key={m.id} style={{ ...S.card, borderColor:m.isMain?`${GOLD}40`:BORDER, position:"relative", overflow:"hidden" }}>
           {m.isMain && <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${GOLD},transparent)` }} />}
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10, gap:8 }}>
-            <div style={{ fontSize:10, letterSpacing:"0.16em", color:m.isMain?GOLD:PURPLE, textTransform:"uppercase", lineHeight:1.4 }}>
+            <div style={{ fontSize:12, letterSpacing:"0.12em", color:m.isMain?GOLD:PURPLE, textTransform:"uppercase", lineHeight:1.4 }}>
               {m.title}{m.note&&<span style={{ color:"#4a4040" }}> · {m.note}</span>}
             </div>
-            {m.isMain && <div style={{ fontSize:9, color:GOLD, background:`${GOLD}18`, padding:"2px 7px", borderRadius:3, whiteSpace:"nowrap" }}>★ Main Event</div>}
+            {m.isMain && <div style={{ fontSize:10, color:GOLD, background:`${GOLD}18`, padding:"3px 9px", borderRadius:4, whiteSpace:"nowrap" }}>★ Main Event</div>}
           </div>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
             {m.competitors.map(c=>{
               const sel=picks[m.id]===c.name;
               return (
-                <button key={c.name} onClick={()=>setPicks(p=>({...p,[m.id]:c.name}))} style={{ flex:1, minWidth:100, background:sel?`${GOLD}18`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"9px 10px", color:sel?"#f0e6d3":"#5a5040", cursor:"pointer", textAlign:"left", fontFamily:"Georgia, serif", transition:"all 0.15s", position:"relative" }}>
-                  <div style={{ fontSize:13, fontWeight:sel?700:400, lineHeight:1.2 }}>{c.name}</div>
-                  {c.role && <div style={{ fontSize:9, color:sel?GOLD:"#3a3030", marginTop:3 }}>{c.role}{sel&&<span style={{ color:GOLD, marginLeft:4 }}>✓</span>}</div>}
-                  {!c.role && sel && <div style={{ fontSize:9, color:GOLD, marginTop:3 }}>✓</div>}
+                <button key={c.name} onClick={()=>setPicks(p=>({...p,[m.id]:p[m.id]===c.name?undefined:c.name}))} style={{ flex:1, minWidth:120, background:sel?`${GOLD}18`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"12px 14px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", textAlign:"left", fontFamily:"Georgia, serif", transition:"all 0.15s", position:"relative" }}>
+                  <div style={{ fontSize:15, fontWeight:sel?700:400, lineHeight:1.3 }}>{c.name}</div>
+                  {c.role && <div style={{ fontSize:11, color:sel?GOLD:"#4a4040", marginTop:4 }}>{c.role}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</div>}
+                  {!c.role && sel && <div style={{ fontSize:11, color:GOLD, marginTop:4 }}>✓</div>}
                 </button>
               );
             })}
@@ -462,12 +462,12 @@ function OUStep({ ouPicks, setOuPicks, onBack, onNext }) {
       <StepHdr icon="📈" title="Over / Unders" sub={`${OU_PTS} pts each`} />
       {overUnders.map(o=>(
         <div key={o.id} style={S.card}>
-          <div style={{ fontSize:12, color:"#d0c4a8", marginBottom:4 }}>{o.label}</div>
-          <div style={{ fontSize:9, letterSpacing:"0.15em", color:GOLD, textTransform:"uppercase", marginBottom:10 }}>{o.line} · {OU_PTS} pts</div>
-          <div style={{ display:"flex", gap:8 }}>
+          <div style={{ fontSize:14, color:"#d0c4a8", marginBottom:5 }}>{o.label}</div>
+          <div style={{ fontSize:11, letterSpacing:"0.12em", color:GOLD, textTransform:"uppercase", marginBottom:12 }}>{o.line} · {OU_PTS} pts</div>
+          <div style={{ display:"flex", gap:10 }}>
             {o.options.map(opt=>{
               const sel=ouPicks[o.id]===opt;
-              return <button key={opt} onClick={()=>setOuPicks(p=>({...p,[o.id]:opt}))} style={{ flex:1, background:sel?`${GOLD}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"9px 10px", color:sel?"#f0e6d3":"#5a5040", cursor:"pointer", fontSize:12, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</button>;
+              return <button key={opt} onClick={()=>setOuPicks(p=>({...p,[o.id]:p[o.id]===opt?undefined:opt}))} style={{ flex:1, background:sel?`${GOLD}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"14px 12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</button>;
             })}
           </div>
         </div>
@@ -485,17 +485,17 @@ function WildCardStep({ wcPicks, setWcPicks, onBack, onNext }) {
       <StepHdr icon="🎰" title="Wild Card Props" sub={`${WC_PTS} pts each`} />
       {wildCards.map(w=>(
         <div key={w.id} style={S.card}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:10 }}>
-            <div style={{ fontSize:12, color:"#d0c4a8", flex:1, lineHeight:1.4 }}>{w.label}</div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:12 }}>
+            <div style={{ fontSize:14, color:"#d0c4a8", flex:1, lineHeight:1.4 }}>{w.label}</div>
             <div style={{ ...S.ptsBadge(WC_PTS) }}>{WC_PTS} pts{w.voidOption&&" · voids if neither"}</div>
           </div>
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
             {w.options.map(opt=>{
               const sel=wcPicks[w.id]===opt;
               const isVoid = opt===w?.voidOption;
               return (
-                <button key={opt} onClick={()=>setWcPicks(p=>({...p,[w.id]:opt}))} style={{ flex:1, minWidth:80, background:sel?(isVoid?"rgba(255,255,255,0.08)":`${GOLD}18`):"rgba(255,255,255,0.02)", border:sel?(isVoid?`1px solid rgba(255,255,255,0.2)`:`1px solid ${GOLD}80`):`1px solid ${BORDER}`, borderRadius:4, padding:"9px 10px", color:sel?"#f0e6d3":"#5a5040", cursor:"pointer", fontSize:12, fontFamily:"Georgia, serif" }}>
-                  {opt}{sel&&<span style={{ color:isVoid?"#888":GOLD, marginLeft:4 }}>✓</span>}
+                <button key={opt} onClick={()=>setWcPicks(p=>({...p,[w.id]:p[w.id]===opt?undefined:opt}))} style={{ flex:1, minWidth:90, background:sel?(isVoid?"rgba(255,255,255,0.08)":`${GOLD}18`):"rgba(255,255,255,0.03)", border:sel?(isVoid?`1px solid rgba(255,255,255,0.2)`:`1px solid ${GOLD}80`):`1px solid ${BORDER}`, borderRadius:8, padding:"14px 12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>
+                  {opt}{sel&&<span style={{ color:isVoid?"#888":GOLD, marginLeft:5 }}>✓</span>}
                 </button>
               );
             })}
@@ -523,7 +523,7 @@ function TheoryStep({ theoPicks, setTheoPicks, onBack, onNext }) {
               <div style={{ ...S.ptsBadge(t.pts) }}>{subLabel}</div>
             </div>
             {t.type==="select" ? (
-              <select value={theoPicks[t.id]||""} onChange={e=>setTheoPicks(p=>({...p,[t.id]:e.target.value}))} style={{ ...S.input, cursor:"pointer" }}>
+              <select value={theoPicks[t.id]||""} onChange={e=>setTheoPicks(p=>({...p,[t.id]:e.target.value||undefined}))} style={{ ...S.input, cursor:"pointer" }}>
                 <option value="">— Choose a match —</option>
                 {t.options.map(opt=><option key={opt} value={opt}>{opt}</option>)}
               </select>
@@ -545,7 +545,7 @@ function TheoryStep({ theoPicks, setTheoPicks, onBack, onNext }) {
               <div style={{ display:"flex", gap:8 }}>
                 {t.options.map(opt=>{
                   const sel=theoPicks[t.id]===opt;
-                  return <button key={opt} onClick={()=>setTheoPicks(p=>({...p,[t.id]:opt}))} style={{ flex:1, background:sel?`${GOLD}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"9px 10px", color:sel?"#f0e6d3":"#5a5040", cursor:"pointer", fontSize:12, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</button>;
+                  return <button key={opt} onClick={()=>setTheoPicks(p=>({...p,[t.id]:p[t.id]===opt?undefined:opt}))} style={{ flex:1, background:sel?`${GOLD}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"14px 12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</button>;
                 })}
               </div>
             )}
@@ -1025,26 +1025,26 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
 function NightHdr({ night }) {
   const col=night===1?GOLD:RED;
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
       <div style={{ height:1, flex:1, background:`linear-gradient(90deg,transparent,${col}40)` }} />
-      <div style={{ fontSize:9, letterSpacing:"0.25em", color:col, textTransform:"uppercase", whiteSpace:"nowrap" }}>{night===1?"Night 1 · Saturday, April 18":"Night 2 · Sunday, April 19"}</div>
+      <div style={{ fontSize:11, letterSpacing:"0.2em", color:col, textTransform:"uppercase", whiteSpace:"nowrap" }}>{night===1?"Night 1 · Saturday, April 18":"Night 2 · Sunday, April 19"}</div>
       <div style={{ height:1, flex:1, background:`linear-gradient(90deg,${col}40,transparent)` }} />
     </div>
   );
 }
 function StepHdr({ icon, title, sub }) {
   return (
-    <div style={{ textAlign:"center", marginBottom:18 }}>
-      <div style={{ fontSize:28, marginBottom:4 }}>{icon}</div>
-      <h2 style={{ color:GOLD, margin:"0 0 3px", fontSize:18 }}>{title}</h2>
-      <div style={{ fontSize:11, color:"#5a5040" }}>{sub}</div>
+    <div style={{ textAlign:"center", marginBottom:22 }}>
+      <div style={{ fontSize:32, marginBottom:6 }}>{icon}</div>
+      <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:22 }}>{title}</h2>
+      <div style={{ fontSize:13, color:"#5a5040" }}>{sub}</div>
     </div>
   );
 }
 function NavRow({ onBack, onNext, nextDisabled, nextLabel }) {
   return (
-    <div style={{ display:"flex", gap:10, marginTop:20, justifyContent:"space-between" }}>
-      <button onClick={onBack} style={{ background:"transparent", border:`1px solid rgba(255,255,255,0.09)`, borderRadius:4, color:"#5a5040", cursor:"pointer", fontSize:11, padding:"10px 18px", fontFamily:"Georgia, serif" }}>← Back</button>
+    <div style={{ display:"flex", gap:12, marginTop:24, justifyContent:"space-between" }}>
+      <button onClick={onBack} style={{ background:"transparent", border:`1px solid rgba(255,255,255,0.12)`, borderRadius:8, color:"#6a6050", cursor:"pointer", fontSize:14, padding:"14px 22px", fontFamily:"Georgia, serif" }}>← Back</button>
       <button style={S.btn(GOLD,nextDisabled)} disabled={nextDisabled} onClick={onNext}>{nextLabel}</button>
     </div>
   );
