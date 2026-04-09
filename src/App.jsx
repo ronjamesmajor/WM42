@@ -381,7 +381,7 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
       <div style={{ fontSize:32, marginBottom:6 }}>🔑</div>
       <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:19 }}>{name.trim()} already has picks</h2>
       <p style={{ color:"#8a8070", fontSize:12, marginBottom:16, lineHeight:1.5 }}>Enter your edit key to modify your picks</p>
-      <input style={{ ...S.input, maxWidth:300, textAlign:"center", margin:"0 auto 14px", display:"block", letterSpacing:"0.15em", fontSize:18, fontWeight:700 }} placeholder="e.g. RNLD420" value={keyInput} onChange={e=>setKeyInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&keyInput&&handleKeySubmit()} maxLength={22} />
+      <input style={{ ...S.input, maxWidth:300, textAlign:"center", margin:"0 auto 14px", display:"block", letterSpacing:"0.15em", fontSize:18, fontWeight:700 }} placeholder="Enter your key" value={keyInput} onChange={e=>setKeyInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&keyInput&&handleKeySubmit()} maxLength={22} />
       {error && <div style={{ color:RED, fontSize:11, marginBottom:10 }}>{error}</div>}
       <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
         <button style={{ background:"transparent", border:`1px solid rgba(255,255,255,0.09)`, borderRadius:4, color:"#908878", cursor:"pointer", fontSize:11, padding:"10px 18px", fontFamily:"Georgia, serif" }} onClick={()=>{ setPhase("name"); setKeyInput(""); setError(""); }}>← Back</button>
@@ -664,6 +664,16 @@ function TriviaTicker({ subs }) {
     // Player count
     if (subs.length >= 3) items.push(`🏟️ ${subs.length} competitors entered the ring`);
 
+    // Meta facts
+    items.push("💻 Built with ~1,200 lines of code in one session");
+    items.push("🚀 From zero to launch in under 12 hours");
+    items.push("🦆 A group of ducks is called a paddling");
+    items.push("🦆 Ducks can sleep with one eye open");
+    items.push("❤️ Thanks for playing — you're the real main event");
+    const uniqueNames = new Set();
+    subs.forEach(s => (s.surprises||[]).filter(Boolean).forEach(g => uniqueNames.add(g.trim())));
+    if (uniqueNames.size > 0) items.push(`🎭 ${uniqueNames.size} unique surprise names in the pool`);
+
     return items;
   })();
 
@@ -706,17 +716,25 @@ function SurprisePool({ subs }) {
 
   useEffect(() => {
     if (!names.length) return;
-    const W = 300, H = 220, PAD = 16;
-    // Init particles with random positions and slow velocities
+    const H = 200, PAD = 14, TOP_PAD = 30;
+
+    // Measure actual container width
+    const el = containerRef.current;
+    const W = el ? el.offsetWidth : 320;
+
+    // Size each particle based on name length — small base, grows with dupes
     particlesRef.current = names.map(([name, count], i) => {
-      const fontSize = Math.round(13 + (count / maxCount) * 10);
-      const estW = name.length * fontSize * 0.55;
-      const estH = fontSize * 1.4;
+      const fs = count > 1 ? 10 + Math.min(count, 4) * 2 : 10;
+      const estW = name.length * fs * 0.52 + 20;
+      const estH = fs + 10;
+      // Place in a grid-ish pattern to start, avoiding overlaps
+      const cols = Math.floor(W / 100) || 2;
+      const col = i % cols, row = Math.floor(i / cols);
       return {
-        x: PAD + Math.random() * (W - estW - PAD * 2),
-        y: PAD + 20 + Math.random() * (H - estH - PAD * 2 - 20),
-        vx: (0.15 + Math.random() * 0.25) * (Math.random() > 0.5 ? 1 : -1),
-        vy: (0.1 + Math.random() * 0.2) * (Math.random() > 0.5 ? 1 : -1),
+        x: PAD + col * ((W - PAD*2) / cols) + Math.random() * 20,
+        y: TOP_PAD + row * 32 + Math.random() * 10,
+        vx: (0.08 + Math.random() * 0.12) * (Math.random() > 0.5 ? 1 : -1),
+        vy: (0.06 + Math.random() * 0.1) * (Math.random() > 0.5 ? 1 : -1),
         w: estW, h: estH,
       };
     });
@@ -726,36 +744,36 @@ function SurprisePool({ subs }) {
       if (!last) last = ts;
       const dt = Math.min(ts - last, 32);
       last = ts;
-      const el = containerRef.current;
-      const cW = el ? el.offsetWidth : W;
-      const cH = H;
+      const cW = containerRef.current ? containerRef.current.offsetWidth : W;
 
       particlesRef.current.forEach((p, i) => {
-        p.x += p.vx * dt * 0.06;
-        p.y += p.vy * dt * 0.06;
-        // Bounce off walls
+        p.x += p.vx * dt * 0.04;
+        p.y += p.vy * dt * 0.04;
+        // Wall bounce
         if (p.x < PAD) { p.x = PAD; p.vx = Math.abs(p.vx); }
         if (p.x + p.w > cW - PAD) { p.x = cW - PAD - p.w; p.vx = -Math.abs(p.vx); }
-        if (p.y < PAD + 20) { p.y = PAD + 20; p.vy = Math.abs(p.vy); }
-        if (p.y + p.h > cH - PAD) { p.y = cH - PAD - p.h; p.vy = -Math.abs(p.vy); }
-        // Nudge away from other particles (soft collision)
+        if (p.y < TOP_PAD) { p.y = TOP_PAD; p.vy = Math.abs(p.vy); }
+        if (p.y + p.h > H - PAD) { p.y = H - PAD - p.h; p.vy = -Math.abs(p.vy); }
+        // Hard separation — push apart if bounding boxes overlap
         for (let j = i + 1; j < particlesRef.current.length; j++) {
           const q = particlesRef.current[j];
-          const dx = (p.x + p.w/2) - (q.x + q.w/2);
-          const dy = (p.y + p.h/2) - (q.y + q.h/2);
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          const minDist = (p.w + q.w) * 0.4;
-          if (dist < minDist && dist > 0) {
-            const nx = dx/dist, ny = dy/dist;
-            const push = 0.02;
-            p.vx += nx * push; p.vy += ny * push;
-            q.vx -= nx * push; q.vy -= ny * push;
-            // Clamp speeds
-            const maxV = 0.4;
-            p.vx = Math.max(-maxV, Math.min(maxV, p.vx));
-            p.vy = Math.max(-maxV, Math.min(maxV, p.vy));
-            q.vx = Math.max(-maxV, Math.min(maxV, q.vx));
-            q.vy = Math.max(-maxV, Math.min(maxV, q.vy));
+          const overlapX = Math.min(p.x+p.w, q.x+q.w) - Math.max(p.x, q.x);
+          const overlapY = Math.min(p.y+p.h, q.y+q.h) - Math.max(p.y, q.y);
+          if (overlapX > 0 && overlapY > 0) {
+            // Push along the axis with less overlap
+            const dx = (p.x + p.w/2) - (q.x + q.w/2);
+            const dy = (p.y + p.h/2) - (q.y + q.h/2);
+            if (Math.abs(dx) > Math.abs(dy)) {
+              const push = overlapX * 0.5 + 1;
+              if (dx > 0) { p.x += push; q.x -= push; } else { p.x -= push; q.x += push; }
+              p.vx = dx > 0 ? Math.abs(p.vx) : -Math.abs(p.vx);
+              q.vx = -p.vx;
+            } else {
+              const push = overlapY * 0.5 + 1;
+              if (dy > 0) { p.y += push; q.y -= push; } else { p.y -= push; q.y += push; }
+              p.vy = dy > 0 ? Math.abs(p.vy) : -Math.abs(p.vy);
+              q.vy = -p.vy;
+            }
           }
         }
       });
@@ -770,25 +788,24 @@ function SurprisePool({ subs }) {
   if (!names.length) return null;
 
   return (
-    <div ref={containerRef} style={{ ...S.card, borderColor:`${PURPLE}30`, marginBottom:18, position:"relative", overflow:"hidden", height:220 }}>
+    <div ref={containerRef} style={{ ...S.card, borderColor:`${PURPLE}30`, marginBottom:18, position:"relative", overflow:"hidden", height:200 }}>
       <div style={{ ...S.lbl, color:PURPLE, marginBottom:0, position:"relative", zIndex:2 }}>Surprise Pool</div>
       {names.map(([name, count], i) => {
-        const pos = positions[i] || { x: 20, y: 40 };
-        const opacity = 0.5 + (count / maxCount) * 0.5;
+        const pos = positions[i] || { x: 20, y: 36 };
+        const fs = count > 1 ? 10 + Math.min(count, 4) * 2 : 10;
         return (
           <div key={name} style={{
             position:"absolute",
             left: pos.x, top: pos.y,
-            fontSize: Math.round(13 + (count / maxCount) * 10),
-            fontWeight: count >= maxCount ? 800 : count > 1 ? 700 : 400,
-            color: count >= maxCount ? GOLD : `rgba(224,212,184,${opacity})`,
+            fontSize: fs,
+            fontWeight: count > 1 ? 700 : 400,
+            color: count > 1 ? GOLD : "#908878",
             fontFamily:"Georgia, serif",
             whiteSpace:"nowrap",
-            textShadow: count > 1 ? `0 0 ${count*5}px rgba(200,160,40,0.25)` : "none",
-            transition:"none",
+            textShadow: count > 1 ? `0 0 ${count*4}px rgba(200,160,40,0.3)` : "none",
             willChange:"left,top",
           }}>
-            {name}{count > 1 && <span style={{ fontSize:10, color:PURPLE, marginLeft:4, verticalAlign:"super" }}>×{count}</span>}
+            {name}{count > 1 && <span style={{ fontSize:9, color:PURPLE, marginLeft:3, verticalAlign:"super" }}>×{count}</span>}
           </div>
         );
       })}
@@ -999,7 +1016,6 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
       <p style={{ color:"#908878", fontSize:11, marginBottom:18, lineHeight:1.5 }}>Enter match winners, bonus results, and surprise appearances live.<br/>Mark the show done to reveal the winner.</p>
       <input type="password" style={{ ...S.input, maxWidth:240, textAlign:"center", margin:"0 auto 14px", display:"block" }} placeholder="Password…" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&(pass===ADMIN_PASS?setUnlocked(true):alert("Wrong password"))} />
       <button style={S.btn(GOLD,!pass)} disabled={!pass} onClick={()=>pass===ADMIN_PASS?setUnlocked(true):alert("Wrong password")}>Unlock</button>
-      <div style={{ marginTop:16, fontSize:10, color:"#5a5050" }}>Hint: vegaswm42</div>
     </div>
   );
 
