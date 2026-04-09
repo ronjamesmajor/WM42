@@ -307,7 +307,7 @@ export default function WM42() {
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:"radial-gradient(ellipse at 20% 10%, #1a1228 0%, #0c0b12 55%, #0f0d18 100%)", color:"#f5efe5", fontFamily:"Georgia, serif", overflow:"hidden" }}>
       {/* Header */}
       <div style={{ flexShrink:0, textAlign:"center", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.3)", overflow:"hidden" }}>
-        <img src="./guesslemania.png" alt="Guesslemania 2026" style={{ width:"100%", height:100, objectFit:"cover", objectPosition:"center 35%", display:"block" }} />
+        <img src="./guesslemania2.png" alt="Guesslemania 2026" style={{ width:"100%", objectFit:"contain", display:"block" }} />
         <div style={{ padding:"8px 16px 10px", background:"linear-gradient(180deg, rgba(12,11,18,0.9) 0%, rgba(12,11,18,0.6) 100%)", marginTop:-1 }}>
           <div style={{ fontSize:12, letterSpacing:"0.15em", color:"#908878", textTransform:"uppercase" }}>April 18–19 · Allegiant Stadium · Las Vegas · Max {maxScore()} pts</div>
         </div>
