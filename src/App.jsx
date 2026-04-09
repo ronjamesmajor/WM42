@@ -188,7 +188,7 @@ const S = {
 
 // ─── ROOT ────────────────────────────────────────────────────────────────────
 export default function WM42() {
-  const [tab,       setTab]       = useState("pick");
+  const [tab,       setTab]       = useState("board");
   const [step,      setStep]      = useState(0);
   const [name,      setName]      = useState("");
   const [picks,        setPicks]        = useState({});
@@ -643,6 +643,14 @@ function TriviaTicker({ subs }) {
     if (sorted.length) items.push(`⚡ First to lock in: ${sorted[0].name}`);
     if (sorted.length > 1) items.push(`🐢 Last to finish their card: ${sorted[sorted.length-1].name}`);
 
+    // Fastest submission (shortest time between first and last sub is tricky,
+    // so we show the earliest timestamp as "fastest")
+    if (sorted.length) {
+      const fastest = sorted[0];
+      const d = new Date(fastest.ts);
+      items.push(`🏃 Fastest submission: ${fastest.name} at ${d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`);
+    }
+
     const byRecent = [...subs].sort((a,b) => b.ts - a.ts);
     if (byRecent.length > 1 && byRecent[0].ts !== sorted[sorted.length-1].ts) {
       items.push(`✏️ Most recent edit: ${byRecent[0].name}`);
@@ -653,6 +661,24 @@ function TriviaTicker({ subs }) {
       items.push(`🔮 Most surprise guesses: ${mostSurprises[0].name} (${(mostSurprises[0].surprises||[]).filter(Boolean).length})`);
     }
 
+    // Most against the grain — person whose picks match the group majority the least
+    if (subs.length >= 3) {
+      const conformity = subs.map(sub => {
+        let agrees = 0;
+        matches.forEach(m => {
+          const pick = sub.picks?.[m.id];
+          if (!pick) return;
+          const counts = {};
+          subs.forEach(s => { const p = s.picks?.[m.id]; if (p) counts[p] = (counts[p]||0)+1; });
+          const majority = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0]?.[0];
+          if (pick === majority) agrees++;
+        });
+        return { name: sub.name, agrees };
+      });
+      const rebel = conformity.sort((a,b) => a.agrees - b.agrees)[0];
+      if (rebel) items.push(`🐺 Most against the grain: ${rebel.name}`);
+    }
+
     const totalPicks = subs.reduce((a,s) => a + Object.keys(s.picks||{}).filter(k=>s.picks[k]).length, 0);
     items.push(`📊 ${totalPicks} total match picks across ${subs.length} players`);
     if (subs.length >= 3) items.push(`🏟️ ${subs.length} competitors entered the ring`);
@@ -660,14 +686,14 @@ function TriviaTicker({ subs }) {
     // Surprise names as ticker items
     const nameSet = new Set();
     subs.forEach(s => (s.surprises||[]).filter(Boolean).forEach(g => nameSet.add(g.trim())));
-    nameSet.forEach(name => items.push(`🎤 "${name}" could be a surprise return / debut`));
+    nameSet.forEach(name => items.push(`🎤 ${name} was selected as a surprise return / debut`));
 
     // Meta facts
     items.push("💻 Built with ~1,200 lines of code in one session");
     items.push("🚀 From zero to launch in under 12 hours");
     items.push("🦆 A group of ducks is called a paddling");
     items.push("🦆 Ducks can sleep with one eye open");
-    items.push("❤️ Thanks for playing — you're the real main event");
+    items.push("❤️ Thanks for playing, you're the real main event");
 
     return items;
   })();
