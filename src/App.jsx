@@ -1,20 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { loadShared, saveShared, subscribeToKey } from "./storage";
 
-// ─── MATCHES (odds-based points from BetOnline.ag) ───────────────────────────
-// pts = points awarded if YOU pick this competitor correctly
-// Favorite (likely winner) = fewer pts · Underdog = more pts
+// ─── MATCHES + INLINE BONUSES ────────────────────────────────────────────────
 const MATCH_PTS = 5;
+const BONUS_PTS = 2;
 const matches = [
   // ── NIGHT 1 (Saturday, April 18) ─────────────────────────────────────────
   // ESPN2 First Hour
   { id:"m11", night:1, title:"Six-Man Tag", note:"ESPN2 First Hour", competitors:[
     { name:"Logan Paul, Austin Theory & iShowSpeed", role:"" },
     { name:"LA Knight & The Usos",                   role:"" },
+  ], bonuses:[
+    { id:"b_m11_a", label:"Who takes the pin?", type:"select", options:["Logan Paul","Austin Theory","iShowSpeed","LA Knight","Jimmy Uso","Jey Uso"] },
   ]},
   { id:"m8",  night:1, title:"Unsanctioned Match", note:"ESPN2 First Hour", competitors:[
     { name:"Drew McIntyre", role:"" },
     { name:"Jacob Fatu",    role:"" },
+  ], bonuses:[
+    { id:"b_m8_a", label:"Who bleeds first?", type:"select", options:["Drew McIntyre","Jacob Fatu"] },
   ]},
   // Main Card
   { id:"m10", night:1, title:"WWE Women's Tag Team Championship", note:"Fatal 4-Way", competitors:[
@@ -22,22 +25,33 @@ const matches = [
     { name:"The Bella Twins",               role:"" },
     { name:"Nia Jax & Lash Legend",         role:"Champions" },
     { name:"Alexa Bliss & Charlotte Flair", role:"" },
+  ], bonuses:[
+    { id:"b_m10_a", label:"Who gets the pin?", type:"select", options:["Bayley","Lyra Valkyrie","Nikki Bella","Brie Bella","Nia Jax","Lash Legend","Alexa Bliss","Charlotte Flair"] },
   ]},
   { id:"m6",  night:1, title:"WWE Women's Intercontinental Championship", competitors:[
     { name:"Becky Lynch", role:"Challenger" },
     { name:"AJ Lee",      role:"Champion"   },
+  ], bonuses:[
+    { id:"b_m6_a", label:"Does this match end in a submission?", type:"yesno" },
   ]},
   { id:"m12", night:1, title:"Singles Match", competitors:[
     { name:"Gunther",      role:"" },
     { name:"Seth Rollins", role:"" },
+  ], bonuses:[
+    { id:"b_m12_a", label:"Seth Rollins entrance length?", type:"overunder", line:"O/U 2 min 15 sec" },
   ]},
   { id:"m3",  night:1, title:"WWE Women's World Championship", competitors:[
     { name:"Stephanie Vaquer", role:"Champion"   },
     { name:"Liv Morgan",       role:"Challenger" },
+  ], bonuses:[
+    { id:"b_m3_a", label:"Do they fight before or after the bell?", type:"select", options:["Before","After"] },
   ]},
   { id:"m1",  night:1, isMain:true, title:"Undisputed WWE Championship", competitors:[
     { name:"Cody Rhodes",  role:"Champion"   },
     { name:"Randy Orton",  role:"Challenger · w/ Pat MAGAFee" },
+  ], bonuses:[
+    { id:"b_m1_a", label:"Does Pat McAfee get on commentary?", type:"yesno" },
+    { id:"b_m1_b", label:"Clean show of respect after the match?", type:"yesno" },
   ]},
   // ── NIGHT 2 (Sunday, April 19) ───────────────────────────────────────────
   // ESPN2 First Hour
@@ -48,57 +62,55 @@ const matches = [
     { name:"Je'Von Evans", role:""         },
     { name:"Rey Mysterio", role:""         },
     { name:"Rusev",        role:""         },
+  ], bonuses:[
+    { id:"b_m4_a", label:"First to start climbing towards the belt?", type:"select", options:["JD McDonagh","Dragon Lee","Penta","Je'Von Evans","Rey Mysterio","Rusev"] },
   ]},
   { id:"m9",  night:2, title:"Brock Lesnar vs. Oba Femi", note:"ESPN2 First Hour", competitors:[
     { name:"Brock Lesnar", role:"" },
     { name:"Oba Femi",     role:"" },
+  ], bonuses:[
+    { id:"b_m9_a", label:"Someone gets held above their opponent's head?", type:"overunder", line:"O/U 2.5 times" },
   ]},
   // Main Card
   { id:"m7",  night:2, title:"Undisputed United States Championship", competitors:[
     { name:"Sami Zayn",       role:"Champion"   },
-    { name:"Trick Williams", role:"Challenger" },
+    { name:"Trick Williams",  role:"Challenger" },
+  ], bonuses:[
+    { id:"b_m7_a", label:"Pinfall attempts?", type:"overunder", line:"O/U 5.5" },
   ]},
   { id:"m2",  night:2, title:"WWE Women's Championship", competitors:[
     { name:"Jade Cargill", role:"Champion"   },
     { name:"Rhea Ripley",  role:"Challenger" },
+  ], bonuses:[
+    { id:"b_m2_a", label:"Match length?", type:"overunder", line:"O/U 19 minutes" },
   ]},
   { id:"m13", night:2, title:"Singles Match", competitors:[
     { name:"Demon Finn Bálor",  role:"" },
     { name:"Dominik Mysterio",  role:"" },
+  ], bonuses:[
+    { id:"b_m13_a", label:"Does 'Demonito' make an appearance?", type:"yesno" },
   ]},
   { id:"m5",  night:2, isMain:true, title:"WWE World Heavyweight Championship", competitors:[
     { name:"CM Punk",      role:"Champion"   },
     { name:"Roman Reigns", role:"Challenger" },
+  ], bonuses:[
+    { id:"b_m5_a", label:"How long do they stare at each other before making a move?", type:"overunder", line:"O/U 1 minute" },
+    { id:"b_m5_b", label:"Does the Bloodline interfere?", type:"yesno" },
   ]},
 ];
 
-// ─── OVER/UNDERS (2 pts each) ────────────────────────────────────────────────
-const OU_PTS = 2;
-const overUnders = [
-  { id:"ou1", label:"CM Punk vs Roman Reigns — match length", line:"O/U 25 minutes",  options:["Over 25 mins","Under 25 mins"] },
-  { id:"ou2", label:"Total title changes across both nights",  line:"O/U 3.5 changes", options:["Over (4+)","Under (3 or fewer)"] },
-  { id:"ou3", label:"Surprise appearance / unannounced return", line:"Yes or No",      options:["Yes","No"] },
-  { id:"ou4", label:"Danhausen appearances across both nights",  line:"O/U 3",           options:["Over (4+)","Under (3 or fewer)"] },
+// All bonuses flattened for scoring
+const allBonuses = matches.flatMap(m => (m.bonuses || []).map(b => ({ ...b, matchId: m.id })));
+
+// ─── END BONUSES ─────────────────────────────────────────────────────────────
+const endBonuses = [
+  { id:"eb1", label:"Longest match of the weekend", type:"select", options:matches.map(m=>m.title) },
+  { id:"eb2", label:"Shortest match of the weekend", type:"select", options:matches.map(m=>m.title) },
 ];
 
-// ─── WILD CARD PROPS (2 pts each) ────────────────────────────────────────────
-const WC_PTS = 2;
-const wildCards = [
-  { id:"w2", label:"Does Stardust (Cody's old character) make an appearance?", options:["Yes","No"] },
-  { id:"w3", label:"Does Giulia vs. Tiffany Stratton (Women's US Championship) happen at WM?", options:["Yes","No"] },
-  { id:"w4", label:"Which Bella Twin gets injured? (voids if neither)", options:["Nikki Bella","Brie Bella","Neither / No injury"], voidOption:"Neither / No injury" },
-  { id:"w5", label:"The voices... what do they say?", options:["Vince McMahon","A McMahon (not Vince)","Nope / None"] },
-];
-
-// ─── THEORY BONUSES ───────────────────────────────────────────────────────────
+// ─── SURPRISE APPEARANCES ────────────────────────────────────────────────────
 const SURPRISE_SLOTS = 6;
 const SURPRISE_PTS   = 2; // +2 per correct, −2 per wrong
-const theories = [
-  { id:"t1", label:"Will a Hall of Famer interfere in any match?",          options:["Yes","No"], pts:2 },
-  { id:"t2", label:"Will there be a brand-new surprise debut or return?",   options:["Yes","No"], pts:2 },
-  { id:"t3", label:"Match of the Night — group consensus picks the winner", type:"select", options:matches.map(m=>m.title), pts:5, consensus:true },
-  { id:"t4", label:"Name up to 6 surprise appearances — +2 per correct, −2 per wrong", type:"surprises", pts:SURPRISE_PTS },
-];
 
 const PICKS_KEY    = "wm42_v4_picks";
 const RESULTS_KEY  = "wm42_v4_results";
@@ -122,61 +134,46 @@ const GREEN  = "#27ae60";
 const PURPLE = "#9b59b6";
 const BORDER = "rgba(255,255,255,0.07)";
 const BG     = "rgba(255,255,255,0.03)";
-const STEPS  = 7; // 0-name 1-night1 2-night2 3-o/u 4-wildcards 5-theories 6-review → 7=done
+// 0=name 1=night1 2=night2 3=endBonuses+surprises 4=review → 5=done
+const STEPS = 5;
 
 function maxScore() {
-  const matchMax = matches.length * MATCH_PTS;
-  const ouMax    = overUnders.length * OU_PTS;
-  const wcMax    = wildCards.length * WC_PTS;
-  const theoMax  = theories.filter(t=>t.type!=="surprises").reduce((a,t) => a + t.pts, 0);
+  const matchMax    = matches.length * MATCH_PTS;
+  const bonusMax    = allBonuses.length * BONUS_PTS;
+  const endMax      = endBonuses.length * BONUS_PTS;
   const surpriseMax = SURPRISE_SLOTS * SURPRISE_PTS;
-  return matchMax + ouMax + wcMax + theoMax + surpriseMax;
+  return matchMax + bonusMax + endMax + surpriseMax;
 }
 
-function calcScore(sub, results, allSubs=[]) {
+function calcScore(sub, results) {
   if (!results?.picks) return null;
   let s = 0;
-  // Match picks — flat 5 pts each
+  // Match winners — 5 pts each
   matches.forEach(m => {
     const winner = results.picks[m.id];
     if (winner && sub.picks?.[m.id] === winner) s += MATCH_PTS;
   });
-  // Over/Unders — flat 2 pts each
-  overUnders.forEach(o => {
-    if (results.overUnders?.[o.id] && sub.overUnders?.[o.id] === results.overUnders[o.id]) s += OU_PTS;
+  // Inline bonuses — 2 pts each
+  allBonuses.forEach(b => {
+    const actual = results.bonuses?.[b.id];
+    const guess  = sub.bonuses?.[b.id];
+    if (actual && guess && actual === guess) s += BONUS_PTS;
   });
-  // Wild Cards — flat 2 pts each
-  wildCards.forEach(w => {
-    const actual = results.wildCards?.[w.id];
-    const guess  = sub.wildCards?.[w.id];
-    if (!actual || !guess) return;
-    if (w.voidOption && actual === w.voidOption) return;
-    if (guess === actual) s += WC_PTS;
+  // End bonuses — 2 pts each
+  endBonuses.forEach(eb => {
+    const actual = results.endBonuses?.[eb.id];
+    const guess  = sub.endBonuses?.[eb.id];
+    if (actual && guess && actual === guess) s += BONUS_PTS;
   });
-  // Theories
-  theories.forEach(t => {
-    if (t.type === "surprises") {
-      // Surprise guesses: +2 per correct, −2 per wrong
-      const actuals = (results.theories?.[t.id] || []).map(n => n.trim().toLowerCase()).filter(Boolean);
-      const guesses = (sub.theories?.[t.id] || []).filter(Boolean);
-      if (actuals.length > 0) {
-        guesses.forEach(g => {
-          if (actuals.includes(g.trim().toLowerCase())) s += SURPRISE_PTS;
-          else s -= SURPRISE_PTS;
-        });
-      }
-    } else if (t.consensus) {
-      const counts = {};
-      allSubs.forEach(s2 => { const v = s2.theories?.[t.id]; if (v) counts[v]=(counts[v]||0)+1; });
-      const max = Math.max(0, ...Object.values(counts));
-      if (max > 0) {
-        const winners = Object.entries(counts).filter(([,v])=>v===max).map(([k])=>k);
-        if (winners.includes(sub.theories?.[t.id])) s += t.pts;
-      }
-    } else {
-      if (results.theories?.[t.id] && sub.theories?.[t.id] === results.theories[t.id]) s += t.pts;
-    }
-  });
+  // Surprise guesses: +2 per correct, −2 per wrong
+  const actuals = (results.surprises || []).map(n => n.trim().toLowerCase()).filter(Boolean);
+  const guesses = (sub.surprises || []).filter(Boolean);
+  if (actuals.length > 0) {
+    guesses.forEach(g => {
+      if (actuals.includes(g.trim().toLowerCase())) s += SURPRISE_PTS;
+      else s -= SURPRISE_PTS;
+    });
+  }
   return s;
 }
 
@@ -194,10 +191,10 @@ export default function WM42() {
   const [tab,       setTab]       = useState("pick");
   const [step,      setStep]      = useState(0);
   const [name,      setName]      = useState("");
-  const [picks,     setPicks]     = useState({});
-  const [ouPicks,   setOuPicks]   = useState({});
-  const [wcPicks,   setWcPicks]   = useState({});
-  const [theoPicks, setTheoPicks] = useState({});
+  const [picks,        setPicks]        = useState({});
+  const [bonusPicks,   setBonusPicks]   = useState({});
+  const [endPicks,     setEndPicks]     = useState({});
+  const [surprises,    setSurprises]    = useState([]);
   const [subs,      setSubs]      = useState([]);
   const [results,   setResults]   = useState(null);
   const [loading,   setLoading]   = useState(false);
@@ -242,7 +239,7 @@ export default function WM42() {
     let existing = await loadShared(PICKS_KEY, []);
     const idx = existing.findIndex(s=>s.name.toLowerCase()===name.trim().toLowerCase());
     const key = idx >= 0 ? existing[idx].editKey : generateKey(name.trim());
-    const sub = { name:name.trim(), picks, overUnders:ouPicks, wildCards:wcPicks, theories:theoPicks, editKey:key, ts:Date.now() };
+    const sub = { name:name.trim(), picks, bonuses:bonusPicks, endBonuses:endPicks, surprises:surprises.filter(Boolean), editKey:key, ts:Date.now() };
     if (idx>=0) existing[idx]=sub; else existing.push(sub);
     const ok = await saveShared(PICKS_KEY, existing);
     setEditKey(key);
@@ -254,16 +251,16 @@ export default function WM42() {
     const merged = {
       ...(results||{}),
       picks:      { ...(results?.picks||{}),      ...(overrides.picks||{}) },
-      overUnders: { ...(results?.overUnders||{}), ...(overrides.overUnders||{}) },
-      wildCards:  { ...(results?.wildCards||{}),  ...(overrides.wildCards||{}) },
-      theories:   overrides.theories !== undefined ? overrides.theories : (results?.theories||{}),
+      bonuses:    { ...(results?.bonuses||{}),    ...(overrides.bonuses||{}) },
+      endBonuses: { ...(results?.endBonuses||{}), ...(overrides.endBonuses||{}) },
+      surprises:  overrides.surprises !== undefined ? overrides.surprises : (results?.surprises||[]),
       gameOver:   results?.gameOver||false,
       lastUpdated:"Admin",
     };
-    // Clean out null picks (toggled off)
-    Object.keys(merged.picks).forEach(k => { if (merged.picks[k] === null) delete merged.picks[k]; });
-    Object.keys(merged.overUnders).forEach(k => { if (merged.overUnders[k] === null) delete merged.overUnders[k]; });
-    Object.keys(merged.wildCards).forEach(k => { if (merged.wildCards[k] === null) delete merged.wildCards[k]; });
+    // Clean out null values (toggled off)
+    ["picks","bonuses","endBonuses"].forEach(key => {
+      Object.keys(merged[key]||{}).forEach(k => { if (merged[key][k] === null) delete merged[key][k]; });
+    });
     const ok = await saveShared(RESULTS_KEY, merged);
     if (ok) setResults(merged);
   }
@@ -277,14 +274,14 @@ export default function WM42() {
   async function handleClearAll() {
     if (!window.confirm("Delete ALL data? Cannot be undone.")) return;
     await saveShared(PICKS_KEY,[]); await saveShared(RESULTS_KEY,null);
-    setSubs([]); setResults(null); setAiStatus(null);
+    setSubs([]); setResults(null);
   }
 
   function loadExistingSub(existing) {
     setPicks(existing.picks || {});
-    setOuPicks(existing.overUnders || {});
-    setWcPicks(existing.wildCards || {});
-    setTheoPicks(existing.theories || {});
+    setBonusPicks(existing.bonuses || {});
+    setEndPicks(existing.endBonuses || {});
+    setSurprises(existing.surprises || []);
     setEditKey(existing.editKey || "");
     setStep(1);
   }
@@ -294,12 +291,10 @@ export default function WM42() {
   const renderPick = () => {
     if (locked) return <LockedStep />;
     if (step===0) return <NameStep name={name} setName={setName} onNewUser={()=>setStep(1)} onReturningUser={loadExistingSub} />;
-    if (step===1) return <MatchStep night={1} picks={picks} setPicks={setPicks} onBack={()=>setStep(0)} onNext={()=>setStep(2)} />;
-    if (step===2) return <MatchStep night={2} picks={picks} setPicks={setPicks} onBack={()=>setStep(1)} onNext={()=>setStep(3)} />;
-    if (step===3) return <OUStep ouPicks={ouPicks} setOuPicks={setOuPicks} onBack={()=>setStep(2)} onNext={()=>setStep(4)} />;
-    if (step===4) return <WildCardStep wcPicks={wcPicks} setWcPicks={setWcPicks} onBack={()=>setStep(3)} onNext={()=>setStep(5)} />;
-    if (step===5) return <TheoryStep theoPicks={theoPicks} setTheoPicks={setTheoPicks} onBack={()=>setStep(4)} onNext={()=>setStep(6)} />;
-    if (step===6) return <ReviewStep name={name} picks={picks} ouPicks={ouPicks} wcPicks={wcPicks} theoPicks={theoPicks} loading={loading} onBack={()=>setStep(5)} onSubmit={handleSubmit} />;
+    if (step===1) return <MatchStep night={1} picks={picks} setPicks={setPicks} bonusPicks={bonusPicks} setBonusPicks={setBonusPicks} onBack={()=>setStep(0)} onNext={()=>setStep(2)} />;
+    if (step===2) return <MatchStep night={2} picks={picks} setPicks={setPicks} bonusPicks={bonusPicks} setBonusPicks={setBonusPicks} onBack={()=>setStep(1)} onNext={()=>setStep(3)} />;
+    if (step===3) return <BonusStep endPicks={endPicks} setEndPicks={setEndPicks} surprises={surprises} setSurprises={setSurprises} onBack={()=>setStep(2)} onNext={()=>setStep(4)} />;
+    if (step===4) return <ReviewStep name={name} picks={picks} bonusPicks={bonusPicks} endPicks={endPicks} surprises={surprises} loading={loading} onBack={()=>setStep(3)} onSubmit={handleSubmit} />;
     if (step===STEPS) return <DoneStep name={name} editKey={editKey} onViewBoard={()=>setTab("board")} onEdit={()=>setStep(0)} />;
   };
 
@@ -400,9 +395,9 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
       <div style={{ display:"flex", gap:8, justifyContent:"center", marginTop:16, flexWrap:"wrap" }}>
         {[
           ["📋","Match Picks",`${MATCH_PTS} pts each`],
-          ["📈","Over/Unders",`${OU_PTS} pts each`],
-          ["🎰","Wild Cards",`${WC_PTS} pts each`],
-          ["🎲","Theories + Surprises","±2 pts per guess"],
+          ["🎯","Match Bonuses",`${BONUS_PTS} pts each`],
+          ["📊","End Bonuses",`${BONUS_PTS} pts each`],
+          ["🎭","Surprises","±${SURPRISE_PTS} pts each"],
         ].map(([icon,label,sub])=>(
           <div key={label} style={{ background:BG, border:`1px solid ${BORDER}`, borderRadius:6, padding:"8px 10px", textAlign:"center", minWidth:90, flex:1 }}>
             <div style={{ fontSize:16, marginBottom:2 }}>{icon}</div>
@@ -417,7 +412,41 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
 }
 
 // ─── MATCH STEP ──────────────────────────────────────────────────────────────
-function MatchStep({ night, picks, setPicks, onBack, onNext }) {
+function BonusQuestion({ bonus, value, onChange }) {
+  if (bonus.type === "yesno") {
+    return (
+      <div style={{ display:"flex", gap:8 }}>
+        {["Yes","No"].map(opt => {
+          const sel = value === opt;
+          return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, background:sel?`${PURPLE}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:5 }}>✓</span>}</button>;
+        })}
+      </div>
+    );
+  }
+  if (bonus.type === "overunder") {
+    return (
+      <div style={{ display:"flex", gap:8 }}>
+        {["Over","Under"].map(opt => {
+          const sel = value === opt;
+          return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, background:sel?`${PURPLE}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:5 }}>✓</span>}</button>;
+        })}
+      </div>
+    );
+  }
+  if (bonus.type === "select") {
+    return (
+      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+        {bonus.options.map(opt => {
+          const sel = value === opt;
+          return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, minWidth:80, background:sel?`${PURPLE}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"10px 12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:13, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:4 }}>✓</span>}</button>;
+        })}
+      </div>
+    );
+  }
+  return null;
+}
+
+function MatchStep({ night, picks, setPicks, bonusPicks, setBonusPicks, onBack, onNext }) {
   const nightMatches = matches.filter(m=>m.night===night);
   const allPicked = nightMatches.every(m=>picks[m.id]);
   return (
@@ -432,11 +461,13 @@ function MatchStep({ night, picks, setPicks, onBack, onNext }) {
             </div>
             {m.isMain && <div style={{ fontSize:10, color:GOLD, background:`${GOLD}18`, padding:"3px 9px", borderRadius:4, whiteSpace:"nowrap" }}>★ Main Event</div>}
           </div>
+          {/* Winner pick */}
+          <div style={{ fontSize:11, color:"#5a5040", marginBottom:6, textTransform:"uppercase", letterSpacing:"0.1em" }}>Winner · {MATCH_PTS} pts</div>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
             {m.competitors.map(c=>{
               const sel=picks[m.id]===c.name;
               return (
-                <button key={c.name} onClick={()=>setPicks(p=>({...p,[m.id]:p[m.id]===c.name?undefined:c.name}))} style={{ flex:1, minWidth:120, background:sel?`${GOLD}18`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"12px 14px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", textAlign:"left", fontFamily:"Georgia, serif", transition:"all 0.15s", position:"relative" }}>
+                <button key={c.name} onClick={()=>setPicks(p=>({...p,[m.id]:p[m.id]===c.name?undefined:c.name}))} style={{ flex:1, minWidth:120, background:sel?`${GOLD}18`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"12px 14px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", textAlign:"left", fontFamily:"Georgia, serif", transition:"all 0.15s" }}>
                   <div style={{ fontSize:15, fontWeight:sel?700:400, lineHeight:1.3 }}>{c.name}</div>
                   {c.role && <div style={{ fontSize:11, color:sel?GOLD:"#4a4040", marginTop:4 }}>{c.role}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</div>}
                   {!c.role && sel && <div style={{ fontSize:11, color:GOLD, marginTop:4 }}>✓</div>}
@@ -444,121 +475,65 @@ function MatchStep({ night, picks, setPicks, onBack, onNext }) {
               );
             })}
           </div>
+          {/* Inline bonuses */}
+          {(m.bonuses||[]).map(b=>(
+            <div key={b.id} style={{ marginTop:14, padding:"12px 14px", background:"rgba(155,89,182,0.06)", border:`1px solid ${PURPLE}30`, borderRadius:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                <div style={{ fontSize:13, color:"#d0c4a8" }}>{b.label}</div>
+                <div style={{ ...S.ptsBadge(BONUS_PTS, PURPLE) }}>{BONUS_PTS} pts</div>
+              </div>
+              {b.line && <div style={{ fontSize:11, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:8 }}>{b.line}</div>}
+              <BonusQuestion bonus={b} value={bonusPicks[b.id]} onChange={v => setBonusPicks(p=>({...p,[b.id]:v}))} />
+            </div>
+          ))}
         </div>
       ))}
-      <div style={{ fontSize:10, color:"#3a3030", textAlign:"center", marginTop:8, marginBottom:4 }}>
-        {MATCH_PTS} pts per correct pick
-      </div>
       <NavRow onBack={onBack} onNext={onNext} nextDisabled={!allPicked} nextLabel={`Night ${night} done →`} />
     </div>
   );
 }
 
-// ─── O/U STEP ────────────────────────────────────────────────────────────────
-function OUStep({ ouPicks, setOuPicks, onBack, onNext }) {
-  const allPicked = overUnders.every(o=>ouPicks[o.id]);
+// ─── BONUS STEP (end bonuses + surprises) ────────────────────────────────────
+function BonusStep({ endPicks, setEndPicks, surprises, setSurprises, onBack, onNext }) {
   return (
     <div>
-      <StepHdr icon="📈" title="Over / Unders" sub={`${OU_PTS} pts each`} />
-      {overUnders.map(o=>(
-        <div key={o.id} style={S.card}>
-          <div style={{ fontSize:14, color:"#d0c4a8", marginBottom:5 }}>{o.label}</div>
-          <div style={{ fontSize:11, letterSpacing:"0.12em", color:GOLD, textTransform:"uppercase", marginBottom:12 }}>{o.line} · {OU_PTS} pts</div>
-          <div style={{ display:"flex", gap:10 }}>
-            {o.options.map(opt=>{
-              const sel=ouPicks[o.id]===opt;
-              return <button key={opt} onClick={()=>setOuPicks(p=>({...p,[o.id]:p[o.id]===opt?undefined:opt}))} style={{ flex:1, background:sel?`${GOLD}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"14px 12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</button>;
-            })}
+      <StepHdr icon="🎯" title="Bonus Picks" sub="Longest/shortest match + surprise appearances" />
+
+      {endBonuses.map(eb=>(
+        <div key={eb.id} style={S.card}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <div style={{ fontSize:14, color:"#d0c4a8" }}>{eb.label}</div>
+            <div style={{ ...S.ptsBadge(BONUS_PTS, PURPLE) }}>{BONUS_PTS} pts</div>
           </div>
+          <select value={endPicks[eb.id]||""} onChange={e=>setEndPicks(p=>({...p,[eb.id]:e.target.value||undefined}))} style={{ ...S.input, cursor:"pointer" }}>
+            <option value="">— Choose a match —</option>
+            {eb.options.map(opt=><option key={opt} value={opt}>{opt}</option>)}
+          </select>
         </div>
       ))}
-      <NavRow onBack={onBack} onNext={onNext} nextDisabled={!allPicked} nextLabel="Wild Card Props →" />
-    </div>
-  );
-}
 
-// ─── WILD CARD STEP ───────────────────────────────────────────────────────────
-function WildCardStep({ wcPicks, setWcPicks, onBack, onNext }) {
-  const allPicked = wildCards.every(w=>wcPicks[w.id]);
-  return (
-    <div>
-      <StepHdr icon="🎰" title="Wild Card Props" sub={`${WC_PTS} pts each`} />
-      {wildCards.map(w=>(
-        <div key={w.id} style={S.card}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:12 }}>
-            <div style={{ fontSize:14, color:"#d0c4a8", flex:1, lineHeight:1.4 }}>{w.label}</div>
-            <div style={{ ...S.ptsBadge(WC_PTS) }}>{WC_PTS} pts{w.voidOption&&" · voids if neither"}</div>
-          </div>
-          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-            {w.options.map(opt=>{
-              const sel=wcPicks[w.id]===opt;
-              const isVoid = opt===w?.voidOption;
-              return (
-                <button key={opt} onClick={()=>setWcPicks(p=>({...p,[w.id]:p[w.id]===opt?undefined:opt}))} style={{ flex:1, minWidth:90, background:sel?(isVoid?"rgba(255,255,255,0.08)":`${GOLD}18`):"rgba(255,255,255,0.03)", border:sel?(isVoid?`1px solid rgba(255,255,255,0.2)`:`1px solid ${GOLD}80`):`1px solid ${BORDER}`, borderRadius:8, padding:"14px 12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>
-                  {opt}{sel&&<span style={{ color:isVoid?"#888":GOLD, marginLeft:5 }}>✓</span>}
-                </button>
-              );
-            })}
-          </div>
+      <div style={S.card}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+          <div style={{ fontSize:14, color:"#d0c4a8" }}>Surprise Appearances</div>
+          <div style={{ ...S.ptsBadge(SURPRISE_PTS, PURPLE) }}>±{SURPRISE_PTS} pts each</div>
         </div>
-      ))}
-      <NavRow onBack={onBack} onNext={onNext} nextDisabled={!allPicked} nextLabel="Theory Bonuses →" />
-    </div>
-  );
-}
+        {Array.from({ length: SURPRISE_SLOTS }).map((_, i) => (
+          <input key={i} style={{ ...S.input, marginBottom:8 }} placeholder={`Surprise #${i+1} (optional)`} value={surprises[i] || ""} onChange={e => {
+            const updated = [...(surprises.length ? surprises : Array(SURPRISE_SLOTS).fill(""))];
+            updated[i] = e.target.value;
+            setSurprises(updated);
+          }} />
+        ))}
+        <div style={{ fontSize:11, color:"#4a4040", marginTop:4 }}>+{SURPRISE_PTS} per correct, −{SURPRISE_PTS} per wrong · leave blank to skip</div>
+      </div>
 
-// ─── THEORY STEP ─────────────────────────────────────────────────────────────
-function TheoryStep({ theoPicks, setTheoPicks, onBack, onNext }) {
-  const required = theories.filter(t=>t.type!=="surprises" && t.type!=="select");
-  const allPicked = required.every(t=>theoPicks[t.id]);
-  return (
-    <div>
-      <StepHdr icon="🎲" title="Theory Bonuses" sub="MOTN consensus · Surprise guesses (±2 pts each)" />
-      {theories.map(t=>{
-        const subLabel = t.consensus ? `${t.pts} pts · group consensus` : t.type==="surprises" ? `+${t.pts} correct / −${t.pts} wrong` : `${t.pts} pts`;
-        return (
-          <div key={t.id} style={S.card}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8, marginBottom:10 }}>
-              <div style={{ fontSize:12, color:"#d0c4a8", flex:1, lineHeight:1.4 }}>{t.label}</div>
-              <div style={{ ...S.ptsBadge(t.pts) }}>{subLabel}</div>
-            </div>
-            {t.type==="select" ? (
-              <select value={theoPicks[t.id]||""} onChange={e=>setTheoPicks(p=>({...p,[t.id]:e.target.value||undefined}))} style={{ ...S.input, cursor:"pointer" }}>
-                <option value="">— Choose a match —</option>
-                {t.options.map(opt=><option key={opt} value={opt}>{opt}</option>)}
-              </select>
-            ) : t.type==="surprises" ? (
-              <div>
-                {Array.from({ length: SURPRISE_SLOTS }).map((_, i) => {
-                  const guesses = theoPicks[t.id] || [];
-                  return (
-                    <input key={i} style={{ ...S.input, marginBottom:6 }} placeholder={`Surprise #${i+1} (optional)`} value={guesses[i] || ""} onChange={e => {
-                      const updated = [...(theoPicks[t.id] || Array(SURPRISE_SLOTS).fill(""))];
-                      updated[i] = e.target.value;
-                      setTheoPicks(p => ({ ...p, [t.id]: updated }));
-                    }} />
-                  );
-                })}
-                <div style={{ fontSize:9, color:"#4a4040", marginTop:4 }}>Optional · exact name match · +{SURPRISE_PTS} per correct, −{SURPRISE_PTS} per wrong · leave blank to skip</div>
-              </div>
-            ) : (
-              <div style={{ display:"flex", gap:8 }}>
-                {t.options.map(opt=>{
-                  const sel=theoPicks[t.id]===opt;
-                  return <button key={opt} onClick={()=>setTheoPicks(p=>({...p,[t.id]:p[t.id]===opt?undefined:opt}))} style={{ flex:1, background:sel?`${GOLD}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}80`:`1px solid ${BORDER}`, borderRadius:8, padding:"14px 12px", color:sel?"#f0e6d3":"#6a6050", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</button>;
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
-      <NavRow onBack={onBack} onNext={onNext} nextDisabled={!allPicked} nextLabel="Review →" />
+      <NavRow onBack={onBack} onNext={onNext} nextDisabled={false} nextLabel="Review →" />
     </div>
   );
 }
 
 // ─── REVIEW STEP ─────────────────────────────────────────────────────────────
-function ReviewStep({ name, picks, ouPicks, wcPicks, theoPicks, loading, onBack, onSubmit }) {
+function ReviewStep({ name, picks, bonusPicks, endPicks, surprises, loading, onBack, onSubmit }) {
   const Section = ({title, children}) => (
     <div style={{ ...S.card, borderColor:`${GOLD}30`, marginBottom:8 }}>
       <div style={S.lbl}>{title}</div>
@@ -566,38 +541,31 @@ function ReviewStep({ name, picks, ouPicks, wcPicks, theoPicks, loading, onBack,
     </div>
   );
   const Row = ({label, value, pts, col}) => (
-    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:`1px solid rgba(255,255,255,0.04)`, fontSize:12 }}>
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderBottom:`1px solid rgba(255,255,255,0.04)`, fontSize:13 }}>
       <span style={{ color:"#6a6050", flex:1, paddingRight:8 }}>{label}</span>
       <span style={{ color:col||GOLD, fontWeight:700 }}>{value}</span>
-      {pts && <span style={{ color:"#3a3030", fontSize:9, marginLeft:6 }}>{pts}pt{pts>1?"s":""}</span>}
+      {pts && <span style={{ color:"#4a4040", fontSize:10, marginLeft:6 }}>{pts}pts</span>}
     </div>
   );
   return (
     <div>
       <StepHdr icon="✅" title="Review Picks" sub={`${name} — looks good?`} />
-      <Section title={`Match Picks (${MATCH_PTS} pts each)`}>
+      <Section title={`Match Picks + Bonuses`}>
         {matches.map(m=>{
-          const pick=picks[m.id]; if (!pick) return null;
-          return <Row key={m.id} label={m.title} value={pick} pts={MATCH_PTS} />;
+          const pick=picks[m.id];
+          return (
+            <div key={m.id}>
+              {pick && <Row label={m.title} value={pick} pts={MATCH_PTS} />}
+              {(m.bonuses||[]).map(b=>bonusPicks[b.id] && <Row key={b.id} label={`↳ ${b.label}`} value={bonusPicks[b.id]} pts={BONUS_PTS} col={PURPLE} />)}
+            </div>
+          );
         })}
       </Section>
-      <Section title={`Over / Unders (${OU_PTS} pts each)`}>
-        {overUnders.map(o=>ouPicks[o.id]&&<Row key={o.id} label={o.label} value={ouPicks[o.id]} pts={OU_PTS} />)}
+      <Section title="End Bonuses">
+        {endBonuses.map(eb=>endPicks[eb.id]&&<Row key={eb.id} label={eb.label} value={endPicks[eb.id]} pts={BONUS_PTS} col={PURPLE} />)}
+        {surprises.filter(Boolean).length > 0 && <Row label="Surprise guesses" value={surprises.filter(Boolean).join(", ")} col={PURPLE} />}
       </Section>
-      <Section title={`Wild Cards (${WC_PTS} pts each)`}>
-        {wildCards.map(w=>wcPicks[w.id]&&<Row key={w.id} label={w.label} value={wcPicks[w.id]} pts={WC_PTS} />)}
-      </Section>
-      <Section title="Theory Bonuses">
-        {theories.map(t=>{
-          if (t.type==="surprises") {
-            const guesses = (theoPicks[t.id] || []).filter(Boolean);
-            if (!guesses.length) return null;
-            return <Row key={t.id} label="Surprise guesses" value={guesses.join(", ")} pts={null} col={PURPLE} />;
-          }
-          return theoPicks[t.id] ? <Row key={t.id} label={t.label} value={theoPicks[t.id]} pts={t.pts} /> : null;
-        })}
-      </Section>
-      <div style={{ textAlign:"center", color:"#3a3030", fontSize:10, marginBottom:14 }}>Max {maxScore()} pts · scores update live during the show</div>
+      <div style={{ textAlign:"center", color:"#4a4040", fontSize:12, marginBottom:14 }}>Max {maxScore()} pts · scores update live during the show</div>
       <NavRow onBack={onBack} onNext={onSubmit} nextDisabled={loading} nextLabel={loading?"Saving…":"🔒 Lock In Picks"} />
     </div>
   );
@@ -643,7 +611,7 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
   const [view, setView] = useState("leaders");
   const gameOver = results?.gameOver || false;
   const resolvedCount = Object.values(results?.picks||{}).filter(Boolean).length;
-  const scored = [...subs].map(s=>({ ...s, score:calcScore(s,results,subs) })).sort((a,b)=>(b.score??-1)-(a.score??-1));
+  const scored = [...subs].map(s=>({ ...s, score:calcScore(s,results) })).sort((a,b)=>(b.score??-1)-(a.score??-1));
   const topScore = scored[0]?.score ?? 0;
   const topPlayers = scored.filter(s=>s.score===topScore && topScore>0);
 
@@ -733,20 +701,18 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
         <div>
           {/* Surprise Guesses — shown first */}
           {(() => {
-            const t = theories.find(t=>t.type==="surprises");
-            if (!t) return null;
-            const actuals = (results?.theories?.[t.id] || []).map(n=>n.trim().toLowerCase()).filter(Boolean);
+            const actuals = (results?.surprises || []).map(n=>n.trim().toLowerCase()).filter(Boolean);
             return (
               <div style={{ ...S.card, borderColor:`${PURPLE}40`, marginBottom:18 }}>
                 <div style={{ ...S.lbl, color:PURPLE, marginBottom:12 }}>Surprise Guesses · ±{SURPRISE_PTS} pts</div>
                 {actuals.length > 0 && (
                   <div style={{ background:"rgba(42,160,42,0.12)", border:"1px solid rgba(42,160,42,0.3)", borderRadius:8, padding:"12px 14px", marginBottom:14 }}>
                     <div style={{ fontSize:11, color:"#6aff6a", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:5 }}>Confirmed Appearances</div>
-                    <div style={{ fontSize:16, fontWeight:700, color:"#f0e6d3" }}>{(results.theories[t.id]||[]).filter(Boolean).join(", ")}</div>
+                    <div style={{ fontSize:16, fontWeight:700, color:"#f0e6d3" }}>{(results.surprises||[]).filter(Boolean).join(", ")}</div>
                   </div>
                 )}
                 {subs.map(sub => {
-                  const guesses = (sub.theories?.[t.id] || []).filter(Boolean);
+                  const guesses = (sub.surprises || []).filter(Boolean);
                   if (!guesses.length) return null;
                   return (
                     <div key={sub.name} style={{ marginBottom:10, padding:"12px 14px", background:"rgba(255,255,255,0.02)", border:`1px solid ${BORDER}`, borderRadius:8 }}>
@@ -769,7 +735,7 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
             );
           })()}
 
-          {/* Matches */}
+          {/* Matches + Bonuses */}
           {matches.map(m=>(
             <div key={m.id} style={{ ...S.card, marginBottom:10 }}>
               <div style={{ fontSize:12, letterSpacing:"0.12em", color:PURPLE, textTransform:"uppercase", marginBottom:10 }}>{m.title}</div>
@@ -785,94 +751,30 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
                   </div>
                 );
               })}
+              {/* Inline bonus results */}
+              {(m.bonuses||[]).map(b => {
+                const actual = results?.bonuses?.[b.id];
+                return (
+                  <div key={b.id} style={{ marginTop:8, padding:"8px 12px", background:`${PURPLE}08`, borderRadius:6 }}>
+                    <div style={{ fontSize:12, color:"#c0b498" }}>{b.label}{b.line&&` (${b.line})`}</div>
+                    {actual && <div style={{ fontSize:13, color:"#6aff6a", fontWeight:700, marginTop:3 }}>✓ {actual}</div>}
+                    {!actual && <div style={{ fontSize:12, color:"#4a4040", marginTop:3 }}>Pending</div>}
+                  </div>
+                );
+              })}
             </div>
           ))}
 
-          {/* O/U */}
+          {/* End Bonuses */}
           <div style={S.card}>
-            <div style={{ ...S.lbl, marginBottom:12 }}>Over / Unders</div>
-            {overUnders.map(o=>(
-              <div key={o.id} style={{ marginBottom:16 }}>
-                <div style={{ fontSize:14, color:"#c0b498", marginBottom:8 }}>{o.label} <span style={{ color:GOLD, fontSize:11 }}>· {OU_PTS}pts</span></div>
-                {o.options.map(opt=>{ const p=ouPct(o.id,opt); const isW=results?.overUnders?.[o.id]===opt; return (
-                  <div key={opt} style={{ marginBottom:6 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-                      <span style={{ fontSize:14, color:isW?"#6aff6a":"#7a7060" }}>{opt}{isW&&" ✓"}</span>
-                      <span style={{ fontSize:14, color:GOLD }}>{p}%</span>
-                    </div>
-                    <Bar pct={p} col={GOLD} isWinner={isW} />
-                  </div>
-                );})}
-              </div>
-            ))}
-          </div>
-
-          {/* Wild Cards */}
-          <div style={S.card}>
-            <div style={{ ...S.lbl, marginBottom:12 }}>Wild Card Props</div>
-            {wildCards.map(w=>{
-              const actual=results?.wildCards?.[w.id];
-              const voided=actual&&actual===w.voidOption;
+            <div style={{ ...S.lbl, marginBottom:12 }}>End Bonuses</div>
+            {endBonuses.map(eb => {
+              const actual = results?.endBonuses?.[eb.id];
               return (
-                <div key={w.id} style={{ marginBottom:16 }}>
-                  <div style={{ fontSize:14, color:"#c0b498", marginBottom:8 }}>{w.label} <span style={{ color:GOLD, fontSize:11 }}>· {WC_PTS}pts{w.voidOption&&" · voids if neither"}</span></div>
-                  {voided && <div style={{ fontSize:12, color:"#5a5040", marginBottom:4 }}>⚡ Voided — no injury occurred</div>}
-                  {w.options.map(opt=>{ const p=wcPct(w.id,opt); const isW=!voided&&results?.wildCards?.[w.id]===opt;
-                    return (
-                    <div key={opt} style={{ marginBottom:6 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3, gap:4 }}>
-                        <span style={{ fontSize:14, color:isW?"#6aff6a":"#7a7060", flex:1 }}>{opt}{isW&&" ✓"}</span>
-                        <span style={{ fontSize:14, color:GOLD }}>{p}%</span>
-                      </div>
-                      <Bar pct={p} col={GOLD} isWinner={isW} />
-                    </div>
-                  );})}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Theories (non-surprise) */}
-          <div style={S.card}>
-            <div style={{ ...S.lbl, marginBottom:12 }}>Theory Bonuses</div>
-            {theories.filter(t=>t.type!=="surprises").map(t=>{
-              if (t.consensus) {
-                const counts={};
-                subs.forEach(s=>{const v=s.theories?.[t.id];if(v)counts[v]=(counts[v]||0)+1;});
-                const topC=Math.max(0,...Object.values(counts));
-                const leaders=Object.entries(counts).filter(([,v])=>v===topC).map(([k])=>k);
-                const total=subs.filter(s=>s.theories?.[t.id]).length;
-                return (
-                  <div key={t.id} style={{ marginBottom:18 }}>
-                    <div style={{ fontSize:14, color:"#c0b498", marginBottom:8 }}>{t.label} <span style={{ color:GOLD, fontSize:11 }}>· {t.pts}pts consensus 👑</span></div>
-                    {Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([title,count])=>{
-                      const p=total?Math.round(count/total*100):0; const lead=leaders.includes(title);
-                      return (
-                        <div key={title} style={{ marginBottom:6 }}>
-                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-                            <span style={{ fontSize:13, color:lead?"#f5e06a":"#7a7060", flex:1, paddingRight:6 }}>{title}{lead&&" 👑"}</span>
-                            <span style={{ fontSize:13, color:GOLD }}>{count} ({p}%)</span>
-                          </div>
-                          <Bar pct={p} col={GOLD} isWinner={false} />
-                        </div>
-                      );
-                    })}
-                    <div style={{ fontSize:11, color:"#3a3030", marginTop:5 }}>👑 = current leader · {t.pts}pts go to whoever matches the top vote after show</div>
-                  </div>
-                );
-              }
-              return (
-                <div key={t.id} style={{ marginBottom:16 }}>
-                  <div style={{ fontSize:14, color:"#c0b498", marginBottom:8 }}>{t.label} <span style={{ color:GOLD, fontSize:11 }}>· {t.pts}pts</span></div>
-                  {t.options.map(opt=>{const count=subs.filter(s=>s.theories?.[t.id]===opt).length;const p=subs.length?Math.round(count/subs.length*100):0;const isW=results?.theories?.[t.id]===opt;return(
-                    <div key={opt} style={{ marginBottom:6 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-                        <span style={{ fontSize:14, color:isW?"#6aff6a":"#7a7060" }}>{opt}{isW&&" ✓"}</span>
-                        <span style={{ fontSize:14, color:GOLD }}>{p}%</span>
-                      </div>
-                      <Bar pct={p} col={PURPLE} isWinner={isW} />
-                    </div>
-                  );})}
+                <div key={eb.id} style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:14, color:"#c0b498", marginBottom:4 }}>{eb.label}</div>
+                  {actual && <div style={{ fontSize:13, color:"#6aff6a", fontWeight:700 }}>✓ {actual}</div>}
+                  {!actual && <div style={{ fontSize:12, color:"#4a4040" }}>Pending</div>}
                 </div>
               );
             })}
@@ -889,37 +791,33 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
     <div style={{ textAlign:"center", paddingTop:32 }}>
       <div style={{ fontSize:36, marginBottom:8 }}>🔐</div>
       <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:18 }}>Admin Panel</h2>
-      <p style={{ color:"#5a5040", fontSize:11, marginBottom:18, lineHeight:1.5 }}>Enter match results, wild card outcomes, and theory results live.<br/>Mark the show done to reveal the winner.</p>
+      <p style={{ color:"#5a5040", fontSize:11, marginBottom:18, lineHeight:1.5 }}>Enter match winners, bonus results, and surprise appearances live.<br/>Mark the show done to reveal the winner.</p>
       <input type="password" style={{ ...S.input, maxWidth:240, textAlign:"center", margin:"0 auto 14px", display:"block" }} placeholder="Password…" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&(pass===ADMIN_PASS?setUnlocked(true):alert("Wrong password"))} />
       <button style={S.btn(GOLD,!pass)} disabled={!pass} onClick={()=>pass===ADMIN_PASS?setUnlocked(true):alert("Wrong password")}>Unlock</button>
       <div style={{ marginTop:16, fontSize:10, color:"#3a3030" }}>Hint: vegaswm42</div>
     </div>
   );
 
-  const curPicks = results?.picks || {};
-  const curWc    = results?.wildCards || {};
-  const curTheo  = results?.theories || {};
+  const curPicks   = results?.picks || {};
+  const curBonuses = results?.bonuses || {};
+  const curEnd     = results?.endBonuses || {};
+  const curSurp    = results?.surprises || [];
 
   function togglePick(matchId, name) {
-    const val = curPicks[matchId] === name ? null : name;
-    onUpdate({ picks: { [matchId]: val } });
+    onUpdate({ picks: { [matchId]: curPicks[matchId] === name ? null : name } });
   }
-  function toggleWc(wcId, opt) {
-    const val = curWc[wcId] === opt ? null : opt;
-    onUpdate({ wildCards: { [wcId]: val } });
+  function toggleBonus(bonusId, opt) {
+    onUpdate({ bonuses: { [bonusId]: curBonuses[bonusId] === opt ? null : opt } });
   }
-  function toggleTheo(theoId, opt) {
-    const val = curTheo[theoId] === opt ? null : opt;
-    onUpdate({ theories: { ...curTheo, [theoId]: val } });
+  function toggleEnd(ebId, val) {
+    onUpdate({ endBonuses: { [ebId]: curEnd[ebId] === val ? null : val } });
   }
   const surpriseTimer = useRef(null);
-  function updateSurprise(theoId, index, value) {
-    const updated = [...(curTheo[theoId] || Array(SURPRISE_SLOTS).fill(""))];
+  function updateSurprise(index, value) {
+    const updated = [...(curSurp.length ? curSurp : Array(SURPRISE_SLOTS).fill(""))];
     updated[index] = value;
-    const newTheo = { ...curTheo, [theoId]: updated };
-    // Debounce text input saves
     clearTimeout(surpriseTimer.current);
-    surpriseTimer.current = setTimeout(() => onUpdate({ theories: newTheo }), 500);
+    surpriseTimer.current = setTimeout(() => onUpdate({ surprises: updated }), 500);
   }
 
   return (
@@ -937,89 +835,68 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
         )}
       </div>
 
-      {/* Match Winners */}
+      {/* Match Winners + Bonuses */}
       <div style={S.card}>
-        <div style={S.lbl}>Match Winners</div>
+        <div style={S.lbl}>Match Results</div>
         <div style={{ fontSize:10, color:"#4a4040", marginBottom:12 }}>Tap to select · tap again to deselect · saves instantly</div>
         {matches.map(m=>(
-          <div key={m.id} style={{ marginBottom:12 }}>
-            <div style={{ fontSize:9, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:5 }}>{m.title}</div>
-            <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+          <div key={m.id} style={{ marginBottom:16 }}>
+            <div style={{ fontSize:10, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:5 }}>{m.title}</div>
+            <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:4 }}>
               {m.competitors.map(c=>{
                 const sel = curPicks[m.id]===c.name;
                 return (
-                  <button key={c.name} onClick={()=>togglePick(m.id,c.name)} style={{ flex:1, minWidth:70, background:sel?`${GREEN}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GREEN}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"6px 8px", color:sel?"#6aff6a":"#4a4040", cursor:"pointer", fontSize:10, fontFamily:"Georgia, serif" }}>
+                  <button key={c.name} onClick={()=>togglePick(m.id,c.name)} style={{ flex:1, minWidth:70, background:sel?`${GREEN}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GREEN}80`:`1px solid ${BORDER}`, borderRadius:6, padding:"8px 8px", color:sel?"#6aff6a":"#4a4040", cursor:"pointer", fontSize:11, fontFamily:"Georgia, serif" }}>
                     {c.name}{sel&&" ✓"}
                   </button>
                 );
               })}
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Wild Cards */}
-      <div style={S.card}>
-        <div style={S.lbl}>Wild Card Results</div>
-        {wildCards.map(w=>(
-          <div key={w.id} style={{ marginBottom:14 }}>
-            <div style={{ fontSize:11, color:"#d0c4a8", marginBottom:6 }}>{w.label}</div>
-            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-              {w.options.map(opt=>{
-                const sel = curWc[w.id]===opt;
-                return (
-                  <button key={opt} onClick={()=>toggleWc(w.id,opt)} style={{ flex:1, minWidth:80, background:sel?`${GREEN}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GREEN}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"7px 8px", color:sel?"#6aff6a":"#4a4040", cursor:"pointer", fontSize:11, fontFamily:"Georgia, serif" }}>
-                    {opt}{sel&&" ✓"}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Theories */}
-      <div style={S.card}>
-        <div style={S.lbl}>Theory Results</div>
-        {theories.map(t=>{
-          if (t.consensus) return (
-            <div key={t.id} style={{ marginBottom:12, background:`${GOLD}08`, border:`1px solid ${GOLD}20`, borderRadius:6, padding:"9px 12px" }}>
-              <div style={{ fontSize:10, color:GOLD, marginBottom:2 }}>{t.label}</div>
-              <div style={{ fontSize:10, color:"#5a5040" }}>Auto-scored from group consensus — no input needed</div>
-            </div>
-          );
-          if (t.type==="surprises") return (
-            <div key={t.id} style={{ marginBottom:12 }}>
-              <div style={{ fontSize:11, color:"#d0c4a8", marginBottom:6 }}>Confirmed Surprise Appearances <span style={{ color:PURPLE, fontSize:9 }}>· ±{SURPRISE_PTS}pts each</span></div>
-              {Array.from({ length: SURPRISE_SLOTS }).map((_, i) => {
-                const vals = curTheo[t.id] || [];
-                return (
-                  <input key={i} style={{ ...S.input, marginBottom:6 }} placeholder={`Surprise #${i+1}`} value={vals[i] || ""} onChange={e => updateSurprise(t.id, i, e.target.value)} />
-                );
-              })}
-              <div style={{ fontSize:9, color:"#3a3030", marginTop:3 }}>Case-insensitive match · auto-saves after typing</div>
-            </div>
-          );
-          return (
-            <div key={t.id} style={{ marginBottom:12 }}>
-              <div style={{ fontSize:11, color:"#d0c4a8", marginBottom:6 }}>{t.label} <span style={{ color:GOLD, fontSize:9 }}>· {t.pts}pts</span></div>
-              <div style={{ display:"flex", gap:6 }}>
-                {t.options.map(opt=>{
-                  const sel = curTheo[t.id]===opt;
-                  return (
-                    <button key={opt} onClick={()=>toggleTheo(t.id,opt)} style={{ flex:1, background:sel?`${GREEN}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GREEN}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"7px 10px", color:sel?"#6aff6a":"#4a4040", cursor:"pointer", fontSize:11, fontFamily:"Georgia, serif" }}>
-                      {opt}{sel&&" ✓"}
-                    </button>
-                  );
-                })}
+            {/* Inline bonus admin */}
+            {(m.bonuses||[]).map(b=>(
+              <div key={b.id} style={{ marginTop:6, padding:"8px 10px", background:`${PURPLE}08`, borderRadius:6 }}>
+                <div style={{ fontSize:11, color:"#c0b498", marginBottom:5 }}>{b.label}{b.line&&` (${b.line})`}</div>
+                <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                  {(b.type==="yesno"?["Yes","No"]:b.type==="overunder"?["Over","Under"]:b.options).map(opt=>{
+                    const sel = curBonuses[b.id]===opt;
+                    return (
+                      <button key={opt} onClick={()=>toggleBonus(b.id,opt)} style={{ flex:1, minWidth:60, background:sel?`${GREEN}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GREEN}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"6px 8px", color:sel?"#6aff6a":"#4a4040", cursor:"pointer", fontSize:10, fontFamily:"Georgia, serif" }}>
+                        {opt}{sel&&" ✓"}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* End Bonuses */}
+      <div style={S.card}>
+        <div style={S.lbl}>End Bonuses</div>
+        {endBonuses.map(eb=>(
+          <div key={eb.id} style={{ marginBottom:12 }}>
+            <div style={{ fontSize:11, color:"#d0c4a8", marginBottom:6 }}>{eb.label}</div>
+            <select value={curEnd[eb.id]||""} onChange={e=>toggleEnd(eb.id,e.target.value||null)} style={{ ...S.input, cursor:"pointer", fontSize:14 }}>
+              <option value="">— Choose —</option>
+              {eb.options.map(opt=><option key={opt} value={opt}>{opt}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+
+      {/* Surprise Appearances */}
+      <div style={S.card}>
+        <div style={S.lbl}>Confirmed Surprise Appearances</div>
+        {Array.from({ length: SURPRISE_SLOTS }).map((_, i) => (
+          <input key={i} style={{ ...S.input, marginBottom:6 }} placeholder={`Surprise #${i+1}`} value={curSurp[i] || ""} onChange={e => updateSurprise(i, e.target.value)} />
+        ))}
+        <div style={{ fontSize:10, color:"#3a3030", marginTop:3 }}>Auto-saves after typing</div>
       </div>
 
       <div style={{ marginTop:8 }}>
-        <button onClick={onClear} style={{ background:"transparent", border:`1px solid ${RED}50`, borderRadius:4, color:RED, cursor:"pointer", fontSize:11, padding:"10px 14px", fontFamily:"Georgia, serif" }}>Clear All Results</button>
+        <button onClick={onClear} style={{ background:"transparent", border:`1px solid ${RED}50`, borderRadius:6, color:RED, cursor:"pointer", fontSize:12, padding:"12px 16px", fontFamily:"Georgia, serif" }}>Clear All Results</button>
       </div>
     </div>
   );
