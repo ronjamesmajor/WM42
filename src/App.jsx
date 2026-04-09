@@ -784,9 +784,10 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
     <div>
       {/* Trophy Banner */}
       {gameOver && topScore>0 && (
-        <div style={{ background:"linear-gradient(135deg,rgba(200,160,40,0.12),rgba(200,160,40,0.03))", border:`1px solid ${GOLD}50`, borderRadius:14, padding:"24px 16px 20px", textAlign:"center", marginBottom:18, position:"relative", overflow:"hidden" }}>
+        <div style={{ background:"linear-gradient(135deg,rgba(200,160,40,0.12),rgba(200,160,40,0.03))", border:`1px solid ${GOLD}50`, borderRadius:14, padding:"28px 16px 22px", textAlign:"center", marginBottom:18, position:"relative" }}>
           <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,transparent,${GOLD},transparent)` }} />
-          <img src="./trophy/trophy.png" alt="World Guessing Champion 2026" style={{ width:180, height:180, objectFit:"contain", margin:"0 auto 12px", display:"block", filter:"drop-shadow(0 0 20px rgba(200,160,40,0.4))" }} />
+          <img src="./trophy/trophy.png" alt="World Guessing Champion 2026" style={{ width:180, height:180, objectFit:"contain", margin:"0 auto 14px", display:"block", animation:"trophyRock 6s ease-in-out infinite" }} />
+          <style>{`@keyframes trophyRock { 0%, 100% { transform: rotate(-2deg) scale(1); } 25% { transform: rotate(2deg) scale(1.02); } 50% { transform: rotate(-1.5deg) scale(1); } 75% { transform: rotate(2.5deg) scale(1.01); } }`}</style>
           {topPlayers.map(p=>(
             <div key={p.name} style={{ fontSize:28, fontWeight:900, color:GOLD2, lineHeight:1.1 }}>{p.name}</div>
           ))}
