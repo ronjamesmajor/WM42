@@ -266,7 +266,7 @@ export default function WM42() {
   }
 
   async function handleMarkDone() {
-    const updated = { ...(results||{}), gameOver:true };
+    const updated = { ...(results||{}), gameOver:!(results?.gameOver) };
     const ok = await saveShared(RESULTS_KEY, updated);
     if (ok) setResults(updated);
   }
@@ -948,31 +948,25 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
 
   return (
     <div>
-      {/* Mark Done */}
-      <div style={{ ...S.card, borderColor: results?.gameOver?`${GREEN}60`:`${GOLD}30`, marginBottom:14 }}>
-        <div style={{ fontSize:10, color:results?.gameOver?GREEN:GOLD, marginBottom:8 }}>🏆 Show Status</div>
-        {results?.gameOver ? (
-          <div style={{ fontSize:12, color:"#6aff6a" }}>✓ Marked complete — trophy is revealed on Live Board</div>
-        ) : (
-          <div>
-            <div style={{ fontSize:11, color:"#908878", marginBottom:10 }}>Mark the show as done to reveal the gold trophy and winner name on the Live Board.</div>
-            <button onClick={onMarkDone} style={S.btn(GOLD)}>🏆 Mark Show Complete</button>
-          </div>
-        )}
+      {/* Mark Done — toggleable */}
+      <div style={{ ...S.card, borderColor: results?.gameOver?`${GREEN}60`:`${GOLD}30`, marginBottom:16, textAlign:"center" }}>
+        <div style={{ fontSize:13, color:results?.gameOver?GREEN:GOLD, marginBottom:10 }}>🏆 Show Status</div>
+        <div style={{ fontSize:14, color:"#a09888", marginBottom:14 }}>{results?.gameOver ? "Trophy is revealed on Live Board" : "Reveal the trophy and winner on the Live Board"}</div>
+        <button onClick={onMarkDone} style={S.btn(results?.gameOver?GREEN:GOLD)}>{results?.gameOver?"✓ Show Complete — Tap to Undo":"🏆 Mark Show Complete"}</button>
       </div>
 
       {/* Match Winners + Bonuses */}
       <div style={S.card}>
-        <div style={S.lbl}>Match Results</div>
-        <div style={{ fontSize:10, color:"#6a6060", marginBottom:12 }}>Tap to select · tap again to deselect · saves instantly</div>
+        <div style={{ fontSize:14, letterSpacing:"0.18em", color:GOLD, textTransform:"uppercase", marginBottom:14 }}>Match Results</div>
+        <div style={{ fontSize:13, color:"#8a8070", marginBottom:14 }}>Tap to select · tap again to deselect · saves instantly</div>
         {matches.map(m=>(
-          <div key={m.id} style={{ marginBottom:16 }}>
-            <div style={{ fontSize:10, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:5 }}>{m.title}</div>
-            <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:4 }}>
+          <div key={m.id} style={{ marginBottom:18 }}>
+            <div style={{ fontSize:13, color:PURPLE, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:7 }}>{m.title}</div>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:5 }}>
               {m.competitors.map(c=>{
                 const sel = curPicks[m.id]===c.name;
                 return (
-                  <button key={c.name} onClick={()=>togglePick(m.id,c.name)} style={{ flex:1, minWidth:70, background:sel?`${GREEN}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GREEN}80`:`1px solid ${BORDER}`, borderRadius:6, padding:"8px 8px", color:sel?"#6aff6a":"#6a6060", cursor:"pointer", fontSize:11, fontFamily:"Georgia, serif" }}>
+                  <button key={c.name} onClick={()=>togglePick(m.id,c.name)} style={{ flex:1, minWidth:75, background:sel?`${GREEN}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GREEN}70`:`1px solid rgba(255,255,255,0.08)`, borderRadius:8, padding:"10px 10px", color:sel?"#6aff6a":"#8a8070", cursor:"pointer", fontSize:13, fontFamily:"Georgia, serif" }}>
                     {c.name}{sel&&" ✓"}
                   </button>
                 );
@@ -980,13 +974,13 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
             </div>
             {/* Inline bonus admin */}
             {(m.bonuses||[]).map(b=>(
-              <div key={b.id} style={{ marginTop:6, padding:"8px 10px", background:`${PURPLE}08`, borderRadius:6 }}>
-                <div style={{ fontSize:11, color:"#d4c8ac", marginBottom:5 }}>{b.label}{b.line&&` (${b.line})`}</div>
-                <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+              <div key={b.id} style={{ marginTop:8, padding:"10px 12px", background:`${PURPLE}08`, borderRadius:8 }}>
+                <div style={{ fontSize:13, color:"#e0d4b8", marginBottom:7 }}>{b.label}{b.line&&` (${b.line})`}</div>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                   {(b.type==="yesno"?["Yes","No"]:b.type==="overunder"?["Over","Under"]:b.options).map(opt=>{
                     const sel = curBonuses[b.id]===opt;
                     return (
-                      <button key={opt} onClick={()=>toggleBonus(b.id,opt)} style={{ flex:1, minWidth:60, background:sel?`${GREEN}20`:"rgba(255,255,255,0.02)", border:sel?`1px solid ${GREEN}80`:`1px solid ${BORDER}`, borderRadius:4, padding:"6px 8px", color:sel?"#6aff6a":"#6a6060", cursor:"pointer", fontSize:10, fontFamily:"Georgia, serif" }}>
+                      <button key={opt} onClick={()=>toggleBonus(b.id,opt)} style={{ flex:1, minWidth:65, background:sel?`${GREEN}20`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GREEN}70`:`1px solid rgba(255,255,255,0.08)`, borderRadius:6, padding:"9px 10px", color:sel?"#6aff6a":"#8a8070", cursor:"pointer", fontSize:12, fontFamily:"Georgia, serif" }}>
                         {opt}{sel&&" ✓"}
                       </button>
                     );
@@ -1000,11 +994,11 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
 
       {/* End Bonuses */}
       <div style={S.card}>
-        <div style={S.lbl}>End Bonuses</div>
+        <div style={{ fontSize:14, letterSpacing:"0.18em", color:GOLD, textTransform:"uppercase", marginBottom:14 }}>End Bonuses</div>
         {endBonuses.map(eb=>(
-          <div key={eb.id} style={{ marginBottom:12 }}>
-            <div style={{ fontSize:11, color:"#e0d4b8", marginBottom:6 }}>{eb.label}</div>
-            <select value={curEnd[eb.id]||""} onChange={e=>toggleEnd(eb.id,e.target.value||null)} style={{ ...S.input, cursor:"pointer", fontSize:14 }}>
+          <div key={eb.id} style={{ marginBottom:14 }}>
+            <div style={{ fontSize:14, color:"#e0d4b8", marginBottom:8 }}>{eb.label}</div>
+            <select value={curEnd[eb.id]||""} onChange={e=>toggleEnd(eb.id,e.target.value||null)} style={{ ...S.input, cursor:"pointer", fontSize:16 }}>
               <option value="">— Choose —</option>
               {eb.options.map(opt=><option key={opt} value={opt}>{opt}</option>)}
             </select>
@@ -1014,15 +1008,15 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
 
       {/* Surprise Appearances */}
       <div style={S.card}>
-        <div style={S.lbl}>Confirmed Surprise Appearances</div>
+        <div style={{ fontSize:14, letterSpacing:"0.18em", color:GOLD, textTransform:"uppercase", marginBottom:14 }}>Confirmed Surprise Appearances</div>
         {Array.from({ length: SURPRISE_SLOTS }).map((_, i) => (
-          <input key={i} style={{ ...S.input, marginBottom:6 }} placeholder={`Surprise #${i+1}`} value={curSurp[i] || ""} onChange={e => updateSurprise(i, e.target.value)} />
+          <input key={i} style={{ ...S.input, marginBottom:8, fontSize:16 }} placeholder={`Surprise #${i+1}`} value={curSurp[i] || ""} onChange={e => updateSurprise(i, e.target.value)} />
         ))}
-        <div style={{ fontSize:10, color:"#5a5050", marginTop:3 }}>Auto-saves after typing</div>
+        <div style={{ fontSize:12, color:"#8a8070", marginTop:4 }}>Auto-saves after typing</div>
       </div>
 
-      <div style={{ marginTop:8 }}>
-        <button onClick={onClear} style={{ background:"transparent", border:`1px solid ${RED}50`, borderRadius:6, color:RED, cursor:"pointer", fontSize:12, padding:"12px 16px", fontFamily:"Georgia, serif" }}>Clear All Results</button>
+      <div style={{ marginTop:10, textAlign:"center" }}>
+        <button onClick={onClear} style={{ background:"transparent", border:`1px solid ${RED}50`, borderRadius:8, color:RED, cursor:"pointer", fontSize:14, padding:"14px 20px", fontFamily:"Georgia, serif" }}>Clear All Results</button>
       </div>
     </div>
   );
