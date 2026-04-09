@@ -55,8 +55,8 @@ const matches = [
   ]},
   // Main Card
   { id:"m7",  night:2, title:"Undisputed United States Championship", competitors:[
-    { name:"Sami Zayn",    role:"Champion"   },
-    { name:"Je'Von Evans", role:"Challenger" },
+    { name:"Sami Zayn",       role:"Champion"   },
+    { name:"Trick Williams", role:"Challenger" },
   ]},
   { id:"m2",  night:2, title:"WWE Women's Championship", competitors:[
     { name:"Jade Cargill", role:"Champion"   },
@@ -691,20 +691,20 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
         </div>
       )}
 
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-        <div style={{ fontSize:10, color:"#4a4040" }}>{subs.length} submission{subs.length!==1?"s":""} · {resolvedCount}/{matches.length} results{lastRefresh?` · ${lastRefresh.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`:""}</div>
-        <button onClick={onRefresh} style={{ background:"transparent", border:`1px solid ${GOLD}40`, borderRadius:4, color:GOLD, cursor:"pointer", fontSize:10, padding:"4px 12px", fontFamily:"Georgia, serif" }}>{loading?"…":"↻"}</button>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+        <div style={{ fontSize:13, color:"#5a5040" }}>{subs.length} submission{subs.length!==1?"s":""} · {resolvedCount}/{matches.length} results{lastRefresh?` · ${lastRefresh.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`:""}</div>
+        <button onClick={onRefresh} style={{ background:"transparent", border:`1px solid ${GOLD}40`, borderRadius:8, color:GOLD, cursor:"pointer", fontSize:13, padding:"8px 16px", fontFamily:"Georgia, serif" }}>{loading?"…":"↻"}</button>
       </div>
 
       {/* Sub-tabs */}
-      <div style={{ display:"flex", border:`1px solid ${BORDER}`, borderRadius:6, overflow:"hidden", marginBottom:16 }}>
+      <div style={{ display:"flex", border:`1px solid ${BORDER}`, borderRadius:8, overflow:"hidden", marginBottom:18 }}>
         {[["leaders","🏅 Leaderboard"],["breakdown","📊 Breakdown"]].map(([id,label])=>(
-          <button key={id} onClick={()=>setView(id)} style={{ flex:1, padding:"9px", fontSize:10, letterSpacing:"0.12em", textTransform:"uppercase", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", background:view===id?`${GOLD}22`:"transparent", color:view===id?GOLD:"#4a4040", borderRight:id==="leaders"?`1px solid ${BORDER}`:"none" }}>{label}</button>
+          <button key={id} onClick={()=>setView(id)} style={{ flex:1, padding:"13px", fontSize:13, letterSpacing:"0.1em", textTransform:"uppercase", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", background:view===id?`${GOLD}22`:"transparent", color:view===id?GOLD:"#4a4040", borderRight:id==="leaders"?`1px solid ${BORDER}`:"none" }}>{label}</button>
         ))}
       </div>
 
       {subs.length===0&&!loading&&(
-        <div style={{ textAlign:"center", padding:"40px 0", color:"#3a3030", fontSize:13 }}>No submissions yet 🎤</div>
+        <div style={{ textAlign:"center", padding:"40px 0", color:"#3a3030", fontSize:16 }}>No submissions yet 🎤</div>
       )}
 
       {/* Leaderboard */}
@@ -712,18 +712,18 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
         const isFirst = i===0 && s.score!==null && s.score>0;
         const medals = ["🥇","🥈","🥉"];
         return (
-          <div key={s.name+s.ts} style={{ ...S.card, borderColor:isFirst&&gameOver?`${GOLD}70`:BORDER, display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ fontSize:i<3?22:13, minWidth:28, textAlign:"center", color:i>=3?"#4a4040":undefined }}>{i<3?medals[i]:`#${i+1}`}</div>
+          <div key={s.name+s.ts} style={{ ...S.card, borderColor:isFirst&&gameOver?`${GOLD}70`:BORDER, display:"flex", alignItems:"center", gap:14, padding:"18px 16px" }}>
+            <div style={{ fontSize:i<3?28:16, minWidth:34, textAlign:"center", color:i>=3?"#4a4040":undefined }}>{i<3?medals[i]:`#${i+1}`}</div>
             <div style={{ flex:1 }}>
-              <div style={{ fontSize:14, fontWeight:700, color:isFirst&&gameOver?GOLD:"#f0e6d3" }}>{s.name}</div>
-              <div style={{ fontSize:9, color:"#3a3030", marginTop:2 }}>{new Date(s.ts).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+              <div style={{ fontSize:18, fontWeight:700, color:isFirst&&gameOver?GOLD:"#f0e6d3" }}>{s.name}</div>
+              <div style={{ fontSize:11, color:"#4a4040", marginTop:3 }}>{new Date(s.ts).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
             </div>
             {s.score!==null ? (
               <div style={{ textAlign:"right" }}>
-                <div style={{ fontSize:24, fontWeight:900, color:isFirst&&gameOver?GOLD:"#d0c4a8", lineHeight:1 }}>{s.score}</div>
-                <div style={{ fontSize:9, color:"#3a3030" }}>/ {maxScore()}</div>
+                <div style={{ fontSize:30, fontWeight:900, color:isFirst&&gameOver?GOLD:"#d0c4a8", lineHeight:1 }}>{s.score}</div>
+                <div style={{ fontSize:11, color:"#4a4040" }}>/ {maxScore()}</div>
               </div>
-            ) : <div style={{ fontSize:10, color:"#3a3030" }}>Pending</div>}
+            ) : <div style={{ fontSize:13, color:"#4a4040" }}>Pending</div>}
           </div>
         );
       })}
@@ -731,17 +731,55 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
       {/* Breakdown */}
       {view==="breakdown" && subs.length>0 && (
         <div>
+          {/* Surprise Guesses — shown first */}
+          {(() => {
+            const t = theories.find(t=>t.type==="surprises");
+            if (!t) return null;
+            const actuals = (results?.theories?.[t.id] || []).map(n=>n.trim().toLowerCase()).filter(Boolean);
+            return (
+              <div style={{ ...S.card, borderColor:`${PURPLE}40`, marginBottom:18 }}>
+                <div style={{ ...S.lbl, color:PURPLE, marginBottom:12 }}>Surprise Guesses · ±{SURPRISE_PTS} pts</div>
+                {actuals.length > 0 && (
+                  <div style={{ background:"rgba(42,160,42,0.12)", border:"1px solid rgba(42,160,42,0.3)", borderRadius:8, padding:"12px 14px", marginBottom:14 }}>
+                    <div style={{ fontSize:11, color:"#6aff6a", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:5 }}>Confirmed Appearances</div>
+                    <div style={{ fontSize:16, fontWeight:700, color:"#f0e6d3" }}>{(results.theories[t.id]||[]).filter(Boolean).join(", ")}</div>
+                  </div>
+                )}
+                {subs.map(sub => {
+                  const guesses = (sub.theories?.[t.id] || []).filter(Boolean);
+                  if (!guesses.length) return null;
+                  return (
+                    <div key={sub.name} style={{ marginBottom:10, padding:"12px 14px", background:"rgba(255,255,255,0.02)", border:`1px solid ${BORDER}`, borderRadius:8 }}>
+                      <div style={{ fontSize:15, fontWeight:700, color:GOLD, marginBottom:6 }}>{sub.name}</div>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                        {guesses.map((g, i) => {
+                          const isCorrect = actuals.length > 0 && actuals.includes(g.trim().toLowerCase());
+                          const isWrong   = actuals.length > 0 && !isCorrect;
+                          return (
+                            <span key={i} style={{ fontSize:14, padding:"5px 12px", borderRadius:6, background:isCorrect?`${GREEN}20`:isWrong?`${RED}20`:"rgba(255,255,255,0.05)", color:isCorrect?"#6aff6a":isWrong?RED:"#c0b498", border:`1px solid ${isCorrect?GREEN:isWrong?RED:"rgba(255,255,255,0.08)"}40` }}>
+                              {g}{isCorrect&&" ✓"}{isWrong&&" ✗"}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {/* Matches */}
           {matches.map(m=>(
-            <div key={m.id} style={{ ...S.card, marginBottom:8 }}>
-              <div style={{ fontSize:9, letterSpacing:"0.15em", color:PURPLE, textTransform:"uppercase", marginBottom:8 }}>{m.title}</div>
+            <div key={m.id} style={{ ...S.card, marginBottom:10 }}>
+              <div style={{ fontSize:12, letterSpacing:"0.12em", color:PURPLE, textTransform:"uppercase", marginBottom:10 }}>{m.title}</div>
               {m.competitors.map(c=>{
                 const p=pct(m.id,c.name); const isW=results?.picks?.[m.id]===c.name;
                 return (
-                  <div key={c.name} style={{ marginBottom:6 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2, gap:6 }}>
-                      <span style={{ fontSize:11, color:isW?"#6aff6a":"#c0b498", flex:1 }}>{c.name}{isW&&" ✓"}</span>
-                      <span style={{ fontSize:11, fontWeight:700, color:GOLD }}>{p}%</span>
+                  <div key={c.name} style={{ marginBottom:8 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3, gap:6 }}>
+                      <span style={{ fontSize:14, color:isW?"#6aff6a":"#c0b498", flex:1 }}>{c.name}{isW&&" ✓"}</span>
+                      <span style={{ fontSize:14, fontWeight:700, color:GOLD }}>{p}%</span>
                     </div>
                     <Bar pct={p} col={GOLD} isWinner={isW} />
                   </div>
@@ -752,15 +790,15 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
 
           {/* O/U */}
           <div style={S.card}>
-            <div style={{ ...S.lbl, marginBottom:10 }}>Over / Unders</div>
+            <div style={{ ...S.lbl, marginBottom:12 }}>Over / Unders</div>
             {overUnders.map(o=>(
-              <div key={o.id} style={{ marginBottom:14 }}>
-                <div style={{ fontSize:11, color:"#c0b498", marginBottom:6 }}>{o.label} <span style={{ color:GOLD, fontSize:9 }}>· {OU_PTS}pts</span></div>
+              <div key={o.id} style={{ marginBottom:16 }}>
+                <div style={{ fontSize:14, color:"#c0b498", marginBottom:8 }}>{o.label} <span style={{ color:GOLD, fontSize:11 }}>· {OU_PTS}pts</span></div>
                 {o.options.map(opt=>{ const p=ouPct(o.id,opt); const isW=results?.overUnders?.[o.id]===opt; return (
-                  <div key={opt} style={{ marginBottom:5 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2 }}>
-                      <span style={{ fontSize:11, color:isW?"#6aff6a":"#7a7060" }}>{opt}{isW&&" ✓"}</span>
-                      <span style={{ fontSize:11, color:GOLD }}>{p}%</span>
+                  <div key={opt} style={{ marginBottom:6 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                      <span style={{ fontSize:14, color:isW?"#6aff6a":"#7a7060" }}>{opt}{isW&&" ✓"}</span>
+                      <span style={{ fontSize:14, color:GOLD }}>{p}%</span>
                     </div>
                     <Bar pct={p} col={GOLD} isWinner={isW} />
                   </div>
@@ -771,20 +809,20 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
 
           {/* Wild Cards */}
           <div style={S.card}>
-            <div style={{ ...S.lbl, marginBottom:10 }}>Wild Card Props</div>
+            <div style={{ ...S.lbl, marginBottom:12 }}>Wild Card Props</div>
             {wildCards.map(w=>{
               const actual=results?.wildCards?.[w.id];
               const voided=actual&&actual===w.voidOption;
               return (
-                <div key={w.id} style={{ marginBottom:14 }}>
-                  <div style={{ fontSize:11, color:"#c0b498", marginBottom:6 }}>{w.label} <span style={{ color:GOLD, fontSize:9 }}>· {WC_PTS}pts{w.voidOption&&" · voids if neither"}</span></div>
-                  {voided && <div style={{ fontSize:10, color:"#5a5040", marginBottom:4 }}>⚡ Voided — no injury occurred</div>}
+                <div key={w.id} style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:14, color:"#c0b498", marginBottom:8 }}>{w.label} <span style={{ color:GOLD, fontSize:11 }}>· {WC_PTS}pts{w.voidOption&&" · voids if neither"}</span></div>
+                  {voided && <div style={{ fontSize:12, color:"#5a5040", marginBottom:4 }}>⚡ Voided — no injury occurred</div>}
                   {w.options.map(opt=>{ const p=wcPct(w.id,opt); const isW=!voided&&results?.wildCards?.[w.id]===opt;
                     return (
-                    <div key={opt} style={{ marginBottom:5 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2, gap:4 }}>
-                        <span style={{ fontSize:11, color:isW?"#6aff6a":"#7a7060", flex:1 }}>{opt}{isW&&" ✓"}</span>
-                        <span style={{ fontSize:11, color:GOLD }}>{p}%</span>
+                    <div key={opt} style={{ marginBottom:6 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3, gap:4 }}>
+                        <span style={{ fontSize:14, color:isW?"#6aff6a":"#7a7060", flex:1 }}>{opt}{isW&&" ✓"}</span>
+                        <span style={{ fontSize:14, color:GOLD }}>{p}%</span>
                       </div>
                       <Bar pct={p} col={GOLD} isWinner={isW} />
                     </div>
@@ -794,10 +832,10 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
             })}
           </div>
 
-          {/* Theories */}
+          {/* Theories (non-surprise) */}
           <div style={S.card}>
-            <div style={{ ...S.lbl, marginBottom:10 }}>Theory Bonuses</div>
-            {theories.map(t=>{
+            <div style={{ ...S.lbl, marginBottom:12 }}>Theory Bonuses</div>
+            {theories.filter(t=>t.type!=="surprises").map(t=>{
               if (t.consensus) {
                 const counts={};
                 subs.forEach(s=>{const v=s.theories?.[t.id];if(v)counts[v]=(counts[v]||0)+1;});
@@ -805,66 +843,32 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
                 const leaders=Object.entries(counts).filter(([,v])=>v===topC).map(([k])=>k);
                 const total=subs.filter(s=>s.theories?.[t.id]).length;
                 return (
-                  <div key={t.id} style={{ marginBottom:16 }}>
-                    <div style={{ fontSize:11, color:"#c0b498", marginBottom:6 }}>{t.label} <span style={{ color:GOLD, fontSize:9 }}>· {t.pts}pts consensus 👑</span></div>
+                  <div key={t.id} style={{ marginBottom:18 }}>
+                    <div style={{ fontSize:14, color:"#c0b498", marginBottom:8 }}>{t.label} <span style={{ color:GOLD, fontSize:11 }}>· {t.pts}pts consensus 👑</span></div>
                     {Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([title,count])=>{
                       const p=total?Math.round(count/total*100):0; const lead=leaders.includes(title);
                       return (
-                        <div key={title} style={{ marginBottom:5 }}>
-                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2 }}>
-                            <span style={{ fontSize:10, color:lead?"#f5e06a":"#7a7060", flex:1, paddingRight:6 }}>{title}{lead&&" 👑"}</span>
-                            <span style={{ fontSize:10, color:GOLD }}>{count} ({p}%)</span>
+                        <div key={title} style={{ marginBottom:6 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                            <span style={{ fontSize:13, color:lead?"#f5e06a":"#7a7060", flex:1, paddingRight:6 }}>{title}{lead&&" 👑"}</span>
+                            <span style={{ fontSize:13, color:GOLD }}>{count} ({p}%)</span>
                           </div>
                           <Bar pct={p} col={GOLD} isWinner={false} />
                         </div>
                       );
                     })}
-                    <div style={{ fontSize:9, color:"#3a3030", marginTop:4 }}>👑 = current leader · {t.pts}pts go to whoever matches the top vote after show</div>
-                  </div>
-                );
-              }
-              if (t.type==="surprises") {
-                const actuals = (results?.theories?.[t.id] || []).map(n=>n.trim().toLowerCase()).filter(Boolean);
-                return (
-                  <div key={t.id} style={{ marginBottom:16 }}>
-                    <div style={{ fontSize:11, color:"#c0b498", marginBottom:8 }}>Surprise Guesses <span style={{ color:PURPLE, fontSize:9 }}>· +{SURPRISE_PTS} correct / −{SURPRISE_PTS} wrong</span></div>
-                    {actuals.length > 0 && (
-                      <div style={{ background:"rgba(42,160,42,0.12)", border:"1px solid rgba(42,160,42,0.3)", borderRadius:4, padding:"8px 10px", marginBottom:10 }}>
-                        <div style={{ fontSize:9, color:"#6aff6a", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4 }}>Confirmed Appearances</div>
-                        <div style={{ fontSize:13, fontWeight:700, color:"#f0e6d3" }}>{(results.theories[t.id]||[]).filter(Boolean).join(", ")}</div>
-                      </div>
-                    )}
-                    {subs.map(sub => {
-                      const guesses = (sub.theories?.[t.id] || []).filter(Boolean);
-                      if (!guesses.length) return null;
-                      return (
-                        <div key={sub.name} style={{ marginBottom:8, padding:"8px 10px", background:"rgba(255,255,255,0.02)", border:`1px solid ${BORDER}`, borderRadius:4 }}>
-                          <div style={{ fontSize:11, fontWeight:700, color:GOLD, marginBottom:4 }}>{sub.name}</div>
-                          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                            {guesses.map((g, i) => {
-                              const isCorrect = actuals.length > 0 && actuals.includes(g.trim().toLowerCase());
-                              const isWrong   = actuals.length > 0 && !isCorrect;
-                              return (
-                                <span key={i} style={{ fontSize:11, padding:"3px 8px", borderRadius:3, background:isCorrect?`${GREEN}20`:isWrong?`${RED}20`:"rgba(255,255,255,0.05)", color:isCorrect?"#6aff6a":isWrong?RED:"#c0b498", border:`1px solid ${isCorrect?GREEN:isWrong?RED:"rgba(255,255,255,0.08)"}40` }}>
-                                  {g}{isCorrect&&" ✓"}{isWrong&&" ✗"}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    <div style={{ fontSize:11, color:"#3a3030", marginTop:5 }}>👑 = current leader · {t.pts}pts go to whoever matches the top vote after show</div>
                   </div>
                 );
               }
               return (
-                <div key={t.id} style={{ marginBottom:14 }}>
-                  <div style={{ fontSize:11, color:"#c0b498", marginBottom:6 }}>{t.label} <span style={{ color:GOLD, fontSize:9 }}>· {t.pts}pts</span></div>
+                <div key={t.id} style={{ marginBottom:16 }}>
+                  <div style={{ fontSize:14, color:"#c0b498", marginBottom:8 }}>{t.label} <span style={{ color:GOLD, fontSize:11 }}>· {t.pts}pts</span></div>
                   {t.options.map(opt=>{const count=subs.filter(s=>s.theories?.[t.id]===opt).length;const p=subs.length?Math.round(count/subs.length*100):0;const isW=results?.theories?.[t.id]===opt;return(
-                    <div key={opt} style={{ marginBottom:5 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2 }}>
-                        <span style={{ fontSize:11, color:isW?"#6aff6a":"#7a7060" }}>{opt}{isW&&" ✓"}</span>
-                        <span style={{ fontSize:11, color:GOLD }}>{p}%</span>
+                    <div key={opt} style={{ marginBottom:6 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                        <span style={{ fontSize:14, color:isW?"#6aff6a":"#7a7060" }}>{opt}{isW&&" ✓"}</span>
+                        <span style={{ fontSize:14, color:GOLD }}>{p}%</span>
                       </div>
                       <Bar pct={p} col={PURPLE} isWinner={isW} />
                     </div>
