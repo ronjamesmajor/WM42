@@ -103,9 +103,14 @@ const matches = [
 const allBonuses = matches.flatMap(m => (m.bonuses || []).map(b => ({ ...b, matchId: m.id })));
 
 // ─── END BONUSES ─────────────────────────────────────────────────────────────
+function matchOptionLabel(m) {
+  const names = m.competitors.map(c => c.name).join(" vs ");
+  return `${m.title} — ${names}`;
+}
+const matchOptions = matches.map(matchOptionLabel);
 const endBonuses = [
-  { id:"eb1", label:"Longest match of the weekend", type:"select", options:matches.map(m=>m.title) },
-  { id:"eb2", label:"Shortest match of the weekend", type:"select", options:matches.map(m=>m.title) },
+  { id:"eb1", label:"Longest match of the weekend", type:"select", options:matchOptions },
+  { id:"eb2", label:"Shortest match of the weekend", type:"select", options:matchOptions },
 ];
 
 // ─── SURPRISE APPEARANCES ────────────────────────────────────────────────────
