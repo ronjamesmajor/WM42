@@ -219,7 +219,21 @@ export default function WM42() {
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminPass,     setAdminPass]     = useState("");
   const [editKey,       setEditKey]       = useState("");
+  const [adminUnlocked2,setAdminUnlocked2]= useState(false);
+  const tapCountRef = useRef(0);
+  const tapResetRef = useRef(null);
   const contentRef = useRef(null);
+
+  function handleHeroTap() {
+    tapCountRef.current += 1;
+    clearTimeout(tapResetRef.current);
+    tapResetRef.current = setTimeout(() => { tapCountRef.current = 0; }, 1500);
+    if (tapCountRef.current >= 5) {
+      setAdminUnlocked2(true);
+      tapCountRef.current = 0;
+      setTab("admin");
+    }
+  }
 
   const fetchBoard = useCallback(async (triggerAI=false) => {
     setLoading(true);
@@ -358,7 +372,7 @@ export default function WM42() {
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:"radial-gradient(ellipse at 20% 10%, #1a1228 0%, #0c0b12 55%, #0f0d18 100%)", color:"#f5efe5", fontFamily:"Georgia, serif", overflow:"hidden" }}>
       {/* Header */}
       <div style={{ flexShrink:0, textAlign:"center", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.3)", overflow:"hidden", position:"relative" }}>
-        <img src="./guesslemania2.png" alt="Guesslemania 2026" style={{ width:"100%", objectFit:"contain", display:"block" }} />
+        <img src="./guesslemania2.png" alt="Guesslemania 2026" onClick={handleHeroTap} style={{ width:"100%", objectFit:"contain", display:"block", cursor:"pointer" }} />
         <button onClick={() => fetchBoard()} aria-label="Refresh" style={{ position:"absolute", top:8, right:8, width:34, height:34, borderRadius:17, background:"rgba(0,0,0,0.55)", border:`1px solid ${GOLD}50`, color:GOLD, cursor:"pointer", fontSize:16, fontFamily:"Georgia, serif", display:"flex", alignItems:"center", justifyContent:"center", padding:0, lineHeight:1 }}>↻</button>
         <div style={{ padding:"8px 16px 10px", background:"linear-gradient(180deg, rgba(12,11,18,0.9) 0%, rgba(12,11,18,0.6) 100%)", marginTop:-1 }}>
           <div style={{ fontSize:12, letterSpacing:"0.12em", color:"#908878", textTransform:"uppercase" }}>
@@ -376,7 +390,7 @@ export default function WM42() {
       )}
       {/* Tabs */}
       <div style={{ flexShrink:0, display:"flex", background:"rgba(0,0,0,0.35)", borderBottom:`1px solid ${BORDER}` }}>
-        {[["pick","📋 Pick 'Em"],["board","📊 Live Board"],["admin","🔐 Admin"]].map(([id,label])=>(
+        {[["pick","📋 Pick 'Em"],["board","📊 Live Boards"],...(adminUnlocked2?[["admin","🔐 Admin"]]:[])].map(([id,label])=>(
           <button key={id} onClick={()=>setTab(id)} style={{ flex:1, padding:"15px 4px", fontSize:12, letterSpacing:"0.1em", textTransform:"uppercase", textAlign:"center", cursor:"pointer", border:"none", background:"transparent", color:tab===id?GOLD:"#6a6060", borderBottom:tab===id?`2px solid ${GOLD}`:"2px solid transparent", fontFamily:"Georgia, serif", transition:"color 0.15s" }}>{label}</button>
         ))}
       </div>
@@ -672,7 +686,7 @@ function DoneStep({ name, editKey, onViewBoard, onEdit }) {
       )}
       <p style={{ color:"#8a8070", fontSize:12, lineHeight:1.6, marginBottom:24 }}>Scores auto-update as WrestleMania results come in.<br/>Share the link — everyone joins the same live board.</p>
       <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap" }}>
-        <button style={S.btn(GOLD)} onClick={onViewBoard}>View Live Board →</button>
+        <button style={S.btn(GOLD)} onClick={onViewBoard}>View Live Boards →</button>
         {!locked && <button style={{ background:"transparent", border:`1px solid ${GOLD}40`, borderRadius:4, color:GOLD, cursor:"pointer", fontSize:12, fontWeight:700, letterSpacing:"0.12em", padding:"11px 24px", textTransform:"uppercase", fontFamily:"Georgia, serif" }} onClick={onEdit}>✏️ Edit Picks</button>}
       </div>
       {!locked && <div style={{ marginTop:14, fontSize:10, color:"#6a6060" }}>You can edit picks until {LOCKOUT_UTC.toLocaleString([], { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit", timeZoneName:"short" })}</div>}
@@ -686,7 +700,7 @@ function LockedStep() {
     <div style={{ textAlign:"center", paddingTop:32 }}>
       <div style={{ fontSize:44, marginBottom:8 }}>🔒</div>
       <h2 style={{ color:RED, margin:"0 0 6px", fontSize:22 }}>Picks Are Locked</h2>
-      <p style={{ color:"#8a8070", fontSize:12, lineHeight:1.6 }}>The show has started — no more changes allowed.<br/>Head to the Live Board to watch the scores roll in!</p>
+      <p style={{ color:"#8a8070", fontSize:12, lineHeight:1.6 }}>The show has started — no more changes allowed.<br/>Head to the Live Boards to watch the scores roll in!</p>
     </div>
   );
 }
@@ -694,16 +708,43 @@ function LockedStep() {
 // ─── BOARD TAB ───────────────────────────────────────────────────────────────
 function TriviaCards({ subs, results }) {
   const [idx, setIdx] = useState(0);
+  const shuffledRef = useRef([]);
   const facts = useTriviaFacts(subs, results);
 
+  // Shuffle once when fact list changes; exhaust before reshuffling
   useEffect(() => {
-    if (facts.length <= 1) return;
-    const timer = setInterval(() => setIdx(i => (i + 1) % facts.length), 6000);
+    const shuffled = [...facts];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    shuffledRef.current = shuffled;
+    setIdx(0);
+  }, [facts.length]);
+
+  useEffect(() => {
+    if (shuffledRef.current.length <= 1) return;
+    const timer = setInterval(() => {
+      setIdx(i => {
+        const next = i + 1;
+        // When we exhaust the list, reshuffle and start over
+        if (next >= shuffledRef.current.length) {
+          const reshuffled = [...shuffledRef.current];
+          for (let k = reshuffled.length - 1; k > 0; k--) {
+            const j = Math.floor(Math.random() * (k + 1));
+            [reshuffled[k], reshuffled[j]] = [reshuffled[j], reshuffled[k]];
+          }
+          shuffledRef.current = reshuffled;
+          return 0;
+        }
+        return next;
+      });
+    }, 6000);
     return () => clearInterval(timer);
   }, [facts.length]);
 
-  if (!facts.length) return null;
-  const current = facts[idx % facts.length];
+  if (!shuffledRef.current.length) return null;
+  const current = shuffledRef.current[idx % shuffledRef.current.length] || "";
 
   return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"30px 8px" }}>
@@ -753,6 +794,11 @@ function useTriviaFacts(subs, results) {
     items.push("🚀 From zero to launch in under 12 hours");
     items.push("🦆 A group of ducks is called a paddling");
     items.push("🦆 Ducks can sleep with one eye open");
+    items.push("🦆 Ducks have a transparent third eyelid that works like swim goggles underwater");
+    items.push("🦆 The myth that a duck's quack doesn't echo was debunked by acousticians at the University of Salford");
+    items.push("🦆 Ducks have no nerves or blood vessels in their feet, which is why they can stand on ice without freezing");
+    items.push("🦆 Ducklings imprint on the first moving thing they see — sometimes a human, sometimes another animal entirely");
+    items.push("🦆 Some duck species can fly over 6,000 feet high and migrate more than 800 miles non-stop");
     items.push("❤️ Thanks for playing, you're the real main event");
 
     if (!subs.length) return items;
@@ -761,7 +807,9 @@ function useTriviaFacts(subs, results) {
     if (sorted.length) {
       const fastest = sorted[0];
       const d = new Date(fastest.ts);
-      items.push(`🏃 Fastest submission: ${fastest.name} at ${d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`);
+      const time = d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit",hour12:true});
+      const date = d.toLocaleDateString([],{month:"long",day:"numeric"});
+      items.push(`🏃 Fastest submission: ${fastest.name} at ${time} on ${date}`);
       items.push(`⚡ First to lock in: ${sorted[0].name}`);
     }
     if (sorted.length > 1) items.push(`🐢 Last to finish their card: ${sorted[sorted.length-1].name}`);
@@ -913,7 +961,9 @@ function useTriviaFacts(subs, results) {
 function TriviaTicker({ subs, results }) {
   const [idx, setIdx] = useState(0);
   const shuffledRef = useRef([]);
-  const facts = useTriviaFacts(subs, results);
+  const allFacts = useTriviaFacts(subs, results);
+  // Slim ticker only uses single-line facts
+  const facts = allFacts.filter(f => f.length <= 70);
 
   // Shuffle once when fact list changes, then cycle through
   useEffect(() => {
@@ -928,7 +978,21 @@ function TriviaTicker({ subs, results }) {
 
   useEffect(() => {
     if (shuffledRef.current.length <= 1) return;
-    const timer = setInterval(() => setIdx(i => (i + 1) % shuffledRef.current.length), 5000);
+    const timer = setInterval(() => {
+      setIdx(i => {
+        const next = i + 1;
+        if (next >= shuffledRef.current.length) {
+          const reshuffled = [...shuffledRef.current];
+          for (let k = reshuffled.length - 1; k > 0; k--) {
+            const j = Math.floor(Math.random() * (k + 1));
+            [reshuffled[k], reshuffled[j]] = [reshuffled[j], reshuffled[k]];
+          }
+          shuffledRef.current = reshuffled;
+          return 0;
+        }
+        return next;
+      });
+    }, 5000);
     return () => clearInterval(timer);
   }, [facts.length]);
 
@@ -1020,7 +1084,7 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
 
       {/* Sub-tabs */}
       <div style={{ display:"flex", border:`1px solid ${BORDER}`, borderRadius:8, overflow:"hidden", marginBottom:18 }}>
-        {[["leaders","🏅 Board"],["breakdown","📊 Breakdown"],["trivia","🎯 Trivia"]].map(([id,label],i,arr)=>(
+        {[["leaders","🏅 Leaders"],["breakdown","📊 Stats"],["trivia","🎯 Trivia"]].map(([id,label],i,arr)=>(
           <button key={id} onClick={()=>setView(id)} style={{ flex:1, padding:"14px 4px", fontSize:13, letterSpacing:"0.08em", textTransform:"uppercase", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", background:view===id?`${GOLD}18`:"transparent", color:view===id?GOLD:"#6a6060", borderRight:i<arr.length-1?`1px solid rgba(255,255,255,0.06)`:"none" }}>{label}</button>
         ))}
       </div>
