@@ -220,9 +220,16 @@ export default function WM42() {
   const [adminPass,     setAdminPass]     = useState("");
   const [editKey,       setEditKey]       = useState("");
   const [adminUnlocked2,setAdminUnlocked2]= useState(false);
+  const [, forceTick]                     = useState(0);
   const tapCountRef = useRef(0);
   const tapResetRef = useRef(null);
   const contentRef = useRef(null);
+
+  // Re-render every 30s so the lockout takes effect for open sessions
+  useEffect(() => {
+    const t = setInterval(() => forceTick(n => n + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   function handleHeroTap() {
     tapCountRef.current += 1;
@@ -296,6 +303,11 @@ export default function WM42() {
   }, [tab]);
 
   async function handleSubmit() {
+    // Re-check lockout right at save time so a stale session can't sneak through
+    if (isLocked()) {
+      alert("Picks are locked — the show has started.");
+      return;
+    }
     setLoading(true);
     let existing = await loadShared(PICKS_KEY, []);
     const idx = existing.findIndex(s=>s.name.toLowerCase()===name.trim().toLowerCase());
@@ -465,7 +477,12 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
     <div style={{ textAlign:"center", paddingTop:8 }}>
       <div style={{ fontSize:32, marginBottom:6 }}>🏟️</div>
       <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:19 }}>WrestleMania 42 Pick 'Em</h2>
-      <p style={{ color:"#8a8070", fontSize:12, marginBottom:16, lineHeight:1.5 }}>Pick your winners · scores update live during the show<br/>Edit your picks anytime before the show starts</p>
+      <p style={{ color:"#8a8070", fontSize:12, marginBottom:16, lineHeight:1.5 }}>Pick your winners · scores update live during the show</p>
+      <div style={{ background:`${GOLD}10`, border:`1px solid ${GOLD}40`, borderRadius:10, padding:"12px 16px", margin:"0 auto 18px", maxWidth:340, textAlign:"center" }}>
+        <div style={{ fontSize:11, color:GOLD, letterSpacing:"0.15em", textTransform:"uppercase", marginBottom:5 }}>🔒 Lockout</div>
+        <div style={{ fontSize:13, color:"#f5efe5", lineHeight:1.45 }}>Edit picks anytime before the show. Picks lock at:</div>
+        <div style={{ fontSize:14, fontWeight:700, color:GOLD, marginTop:5 }}>{LOCKOUT_UTC.toLocaleString([], { weekday:"long", month:"long", day:"numeric", hour:"numeric", minute:"2-digit", hour12:true, timeZoneName:"short" })}</div>
+      </div>
       <input style={{ ...S.input, maxWidth:300, textAlign:"center", margin:"0 auto 14px", display:"block" }} placeholder="Your name…" value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&name.trim()&&handleNameSubmit()} />
       <button style={S.btn(GOLD,!name.trim()||checking)} disabled={!name.trim()||checking} onClick={handleNameSubmit}>{checking ? "Checking…" : "Start Picking →"}</button>
       <div style={{ display:"flex", gap:8, justifyContent:"center", marginTop:16, flexWrap:"wrap" }}>
