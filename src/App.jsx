@@ -770,46 +770,51 @@ function TriviaCards({ subs, results }) {
   if (!shuffledRef.current.length) return null;
   const current = shuffledRef.current[idx % shuffledRef.current.length] || "";
 
-  const arrowBtn = {
-    background:"rgba(155,89,182,0.1)",
-    border:`1px solid ${PURPLE}40`,
+  const arrowBtn = (side) => ({
+    position:"absolute",
+    top:"50%",
+    transform:"translateY(-50%)",
+    [side]:10,
+    background:"rgba(12,11,18,0.6)",
+    backdropFilter:"blur(8px)",
+    WebkitBackdropFilter:"blur(8px)",
+    border:`1px solid ${PURPLE}50`,
     color:PURPLE,
-    width:42, height:42, borderRadius:21,
-    cursor:"pointer", fontSize:20, fontFamily:"Georgia, serif",
+    width:46, height:46, borderRadius:23,
+    cursor:"pointer", fontSize:22, fontFamily:"Georgia, serif",
     display:"flex", alignItems:"center", justifyContent:"center",
     padding:0, lineHeight:1,
-    flexShrink:0,
-  };
+    zIndex:2,
+  });
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"30px 8px" }}>
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"24px 4px" }}>
       <div style={{ ...S.lbl, color:PURPLE, marginBottom:18 }}>Trivia & Stats</div>
-      <div style={{ display:"flex", alignItems:"center", gap:10, width:"100%", maxWidth:540 }}>
-        <button onClick={goPrev} aria-label="Previous fact" style={arrowBtn}>←</button>
+      <div style={{ position:"relative", width:"100%", maxWidth:560 }}>
+        <button onClick={goPrev} aria-label="Previous fact" style={arrowBtn("left")}>←</button>
+        <button onClick={goNext} aria-label="Next fact" style={arrowBtn("right")}>→</button>
         <div key={idx} style={{
-          flex:1,
-          background:"linear-gradient(135deg,rgba(155,89,182,0.08),rgba(200,160,40,0.05))",
+          background:"linear-gradient(135deg,rgba(155,89,182,0.1),rgba(200,160,40,0.06))",
           border:`1px solid ${PURPLE}40`,
-          borderRadius:18,
-          padding:"32px 24px",
+          borderRadius:20,
+          padding:"56px 68px",
           textAlign:"center",
-          minHeight:160,
+          minHeight:240,
           display:"flex",
           alignItems:"center",
           justifyContent:"center",
           animation:"cardFlip 6s ease",
-          boxShadow:`0 8px 32px rgba(155,89,182,0.1)`,
+          boxShadow:`0 12px 40px rgba(155,89,182,0.12)`,
         }}>
-          <div style={{ fontSize:18, color:"#f5efe5", lineHeight:1.5, fontFamily:"Georgia, serif" }}>{current}</div>
+          <div style={{ fontSize:20, color:"#f5efe5", lineHeight:1.55, fontFamily:"Georgia, serif" }}>{current}</div>
         </div>
-        <button onClick={goNext} aria-label="Next fact" style={arrowBtn}>→</button>
       </div>
-      <div style={{ display:"flex", gap:6, marginTop:18 }}>
+      <div style={{ display:"flex", gap:6, marginTop:20 }}>
         {facts.slice(0, Math.min(facts.length, 12)).map((_, i) => (
-          <div key={i} style={{ width: i === (idx % facts.length) ? 18 : 6, height:6, borderRadius:3, background: i === (idx % facts.length) ? GOLD : "rgba(255,255,255,0.15)", transition:"all 0.4s" }} />
+          <div key={i} style={{ width: i === (idx % facts.length) ? 20 : 6, height:6, borderRadius:3, background: i === (idx % facts.length) ? GOLD : "rgba(255,255,255,0.15)", transition:"all 0.4s" }} />
         ))}
       </div>
-      <div style={{ fontSize:11, color:"#6a6060", marginTop:14 }}>{facts.length} facts in rotation · tap arrows or wait</div>
+      <div style={{ fontSize:12, color:"#6a6060", marginTop:14 }}>{facts.length} facts in rotation · tap arrows or wait</div>
       <style>{`@keyframes cardFlip { 0% { opacity:0; transform:translateY(12px) scale(0.96); } 12% { opacity:1; transform:translateY(0) scale(1); } 88% { opacity:1; transform:translateY(0) scale(1); } 100% { opacity:0; transform:translateY(-12px) scale(0.96); } }`}</style>
     </div>
   );
