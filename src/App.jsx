@@ -103,11 +103,22 @@ const matches = [
 const allBonuses = matches.flatMap(m => (m.bonuses || []).map(b => ({ ...b, matchId: m.id })));
 
 // ─── END BONUSES ─────────────────────────────────────────────────────────────
-function matchOptionLabel(m) {
-  const names = m.competitors.map(c => c.name).join(" vs ");
-  return `${m.title} — ${names}`;
-}
-const matchOptions = matches.map(matchOptionLabel);
+const matchShorthands = {
+  m11: "Six-Man Tag",
+  m8:  "Drew vs Jacob (Unsanctioned)",
+  m10: "Women's 4-Way Tag (Tag Title)",
+  m6:  "AJ Lee vs Becky (Women's IC)",
+  m12: "Gunther vs Rollins",
+  m3:  "Vaquer vs Liv (Women's World)",
+  m1:  "Cody vs Randy (WWE Title)",
+  m4:  "IC Ladder Match (IC Title)",
+  m9:  "Lesnar vs Oba",
+  m7:  "Sami vs Trick (US Title)",
+  m2:  "Jade vs Rhea (Women's Title)",
+  m13: "Demon Finn vs Dom",
+  m5:  "Punk vs Reigns (Heavyweight)",
+};
+const matchOptions = matches.map(m => matchShorthands[m.id] || m.title);
 const endBonuses = [
   { id:"eb1", label:"Longest match of the weekend", type:"select", options:matchOptions },
   { id:"eb2", label:"Shortest match of the weekend", type:"select", options:matchOptions },
@@ -115,6 +126,7 @@ const endBonuses = [
 
 // ─── SURPRISE APPEARANCES ────────────────────────────────────────────────────
 const SURPRISE_SLOTS = 6;
+const ADMIN_SURPRISE_SLOTS = 10;
 const SURPRISE_PTS   = 2; // +2 per correct, −2 per wrong
 
 const PICKS_KEY    = "wm42_v4_picks";
@@ -829,6 +841,25 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
         <div style={{ textAlign:"center", padding:"40px 0", color:"#5a5050", fontSize:16 }}>No submissions yet 🎤</div>
       )}
 
+      {/* Slammy Awards — show on both views when results exist */}
+      {slammys && resolvedCount > 0 && (
+        <div style={{ marginBottom:18 }}>
+          <div style={{ ...S.lbl, textAlign:"center", marginBottom:14 }}>Slammy Awards</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            {slammys.map(s => (
+              <div key={s.title} style={{ ...S.card, textAlign:"center", padding:"14px 12px", marginBottom:0 }}>
+                <div style={{ fontSize:28, marginBottom:4 }}>{s.emoji}</div>
+                <div style={{ fontSize:13, fontWeight:700, color:GOLD, marginBottom:2 }}>{s.title}</div>
+                <div style={{ fontSize:11, color:"#908878", marginBottom:6 }}>{s.sub}</div>
+                {s.winners ? s.winners.map(w => (
+                  <div key={w} style={{ fontSize:15, fontWeight:700, color:"#f5efe5" }}>{w}</div>
+                )) : <div style={{ fontSize:12, color:"#6a6060" }}>TBD</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Leaderboard */}
       {view==="leaders" && scored.length>0 && scored.map((s,i)=>{
         const isFirst = i===0 && s.score!==null && s.score>0;
@@ -849,25 +880,6 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
           </div>
         );
       })}
-
-      {/* Slammy Awards — show when results exist */}
-      {slammys && resolvedCount > 0 && (
-        <div style={{ marginBottom:18 }}>
-          <div style={{ ...S.lbl, textAlign:"center", marginBottom:14 }}>Slammy Awards</div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-            {slammys.map(s => (
-              <div key={s.title} style={{ ...S.card, textAlign:"center", padding:"14px 12px", marginBottom:0 }}>
-                <div style={{ fontSize:28, marginBottom:4 }}>{s.emoji}</div>
-                <div style={{ fontSize:13, fontWeight:700, color:GOLD, marginBottom:2 }}>{s.title}</div>
-                <div style={{ fontSize:11, color:"#908878", marginBottom:6 }}>{s.sub}</div>
-                {s.winners ? s.winners.map(w => (
-                  <div key={w} style={{ fontSize:15, fontWeight:700, color:"#f5efe5" }}>{w}</div>
-                )) : <div style={{ fontSize:12, color:"#6a6060" }}>TBD</div>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Breakdown */}
       {view==="breakdown" && subs.length>0 && (
@@ -959,7 +971,8 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
   }
   const surpriseTimer = useRef(null);
   function updateSurprise(index, value) {
-    const updated = [...(curSurp.length ? curSurp : Array(SURPRISE_SLOTS).fill(""))];
+    const updated = [...(curSurp.length ? curSurp : Array(ADMIN_SURPRISE_SLOTS).fill(""))];
+    while (updated.length < ADMIN_SURPRISE_SLOTS) updated.push("");
     updated[index] = value;
     clearTimeout(surpriseTimer.current);
     surpriseTimer.current = setTimeout(() => onUpdate({ surprises: updated }), 500);
@@ -1029,10 +1042,10 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
       {/* Surprise Appearances */}
       <div style={S.card}>
         <div style={{ fontSize:14, letterSpacing:"0.18em", color:GOLD, textTransform:"uppercase", marginBottom:14 }}>Confirmed Surprise Appearances</div>
-        {Array.from({ length: SURPRISE_SLOTS }).map((_, i) => (
+        {Array.from({ length: ADMIN_SURPRISE_SLOTS }).map((_, i) => (
           <input key={i} style={{ ...S.input, marginBottom:8, fontSize:16 }} placeholder={`Surprise #${i+1}`} value={curSurp[i] || ""} onChange={e => updateSurprise(i, e.target.value)} />
         ))}
-        <div style={{ fontSize:12, color:"#8a8070", marginTop:4 }}>Auto-saves after typing</div>
+        <div style={{ fontSize:12, color:"#8a8070", marginTop:4 }}>Auto-saves after typing · up to {ADMIN_SURPRISE_SLOTS} entries</div>
       </div>
 
       <div style={{ marginTop:10, textAlign:"center" }}>
