@@ -295,6 +295,12 @@ export default function WM42() {
   }
 
   async function adminSave(overrides) {
+    // Track the most recently entered match result for the ticker
+    let lastPickId = results?.lastPickId;
+    if (overrides.picks) {
+      const newPick = Object.entries(overrides.picks).find(([,v]) => v !== null);
+      if (newPick) lastPickId = newPick[0];
+    }
     const merged = {
       ...(results||{}),
       picks:      { ...(results?.picks||{}),      ...(overrides.picks||{}) },
@@ -302,12 +308,15 @@ export default function WM42() {
       endBonuses: { ...(results?.endBonuses||{}), ...(overrides.endBonuses||{}) },
       surprises:  overrides.surprises !== undefined ? overrides.surprises : (results?.surprises||[]),
       gameOver:   results?.gameOver||false,
+      lastPickId,
       lastUpdated:"Admin",
     };
     // Clean out null values (toggled off)
     ["picks","bonuses","endBonuses"].forEach(key => {
       Object.keys(merged[key]||{}).forEach(k => { if (merged[key][k] === null) delete merged[key][k]; });
     });
+    // If the latest pick was just toggled off, clear the lastPickId
+    if (merged.lastPickId && !merged.picks[merged.lastPickId]) merged.lastPickId = null;
     const ok = await saveShared(RESULTS_KEY, merged);
     if (ok) setResults(merged);
   }
@@ -683,25 +692,90 @@ function LockedStep() {
 }
 
 // ─── BOARD TAB ───────────────────────────────────────────────────────────────
-function TriviaTicker({ subs }) {
+function TriviaCards({ subs, results }) {
   const [idx, setIdx] = useState(0);
-  const shuffledRef = useRef([]);
+  const facts = useTriviaFacts(subs, results);
 
-  const facts = (() => {
-    if (!subs.length) return [];
+  useEffect(() => {
+    if (facts.length <= 1) return;
+    const timer = setInterval(() => setIdx(i => (i + 1) % facts.length), 6000);
+    return () => clearInterval(timer);
+  }, [facts.length]);
+
+  if (!facts.length) return null;
+  const current = facts[idx % facts.length];
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"30px 8px" }}>
+      <div style={{ ...S.lbl, color:PURPLE, marginBottom:18 }}>Trivia & Stats</div>
+      <div key={idx} style={{
+        background:"linear-gradient(135deg,rgba(155,89,182,0.08),rgba(200,160,40,0.05))",
+        border:`1px solid ${PURPLE}40`,
+        borderRadius:18,
+        padding:"32px 24px",
+        textAlign:"center",
+        maxWidth:480,
+        width:"100%",
+        minHeight:160,
+        display:"flex",
+        alignItems:"center",
+        justifyContent:"center",
+        animation:"cardFlip 6s ease",
+        boxShadow:`0 8px 32px rgba(155,89,182,0.1)`,
+      }}>
+        <div style={{ fontSize:18, color:"#f5efe5", lineHeight:1.5, fontFamily:"Georgia, serif" }}>{current}</div>
+      </div>
+      <div style={{ display:"flex", gap:6, marginTop:18 }}>
+        {facts.slice(0, Math.min(facts.length, 12)).map((_, i) => (
+          <div key={i} style={{ width: i === (idx % facts.length) ? 18 : 6, height:6, borderRadius:3, background: i === (idx % facts.length) ? GOLD : "rgba(255,255,255,0.15)", transition:"all 0.4s" }} />
+        ))}
+      </div>
+      <div style={{ fontSize:11, color:"#6a6060", marginTop:14 }}>{facts.length} facts in rotation · auto advances</div>
+      <style>{`@keyframes cardFlip { 0% { opacity:0; transform:translateY(12px) scale(0.96); } 12% { opacity:1; transform:translateY(0) scale(1); } 88% { opacity:1; transform:translateY(0) scale(1); } 100% { opacity:0; transform:translateY(-12px) scale(0.96); } }`}</style>
+    </div>
+  );
+}
+
+function useTriviaFacts(subs, results) {
+  return (() => {
     const items = [];
+    items.push("🎤 Pete Rose was attacked by Kane at three different WrestleManias (XIV, XV, X-Seven)");
+    items.push("🦣 Bob Uecker nearly got choked out by Andre the Giant at WrestleMania III as a guest ring announcer");
+    items.push("🎹 Liberace was the guest timekeeper at WrestleMania I, performing a high-kick routine with the Rockettes");
+    items.push("🌐 WrestleMania 2 was held in three different cities on the same night: New York, Chicago, and Los Angeles");
+    items.push("🪜 The first ladder match in WWF history was at WrestleMania X: Razor Ramon vs Shawn Michaels for the IC title");
+    items.push("🇨🇦 WrestleMania VI was the first WM held outside the United States, at Toronto's SkyDome in 1990");
+    items.push("🎭 Owen Hart pinning his brother Bret Hart in the WrestleMania X opener is one of the greatest opening matches ever");
+    items.push("🎶 Aretha Franklin sang America the Beautiful at WrestleMania III; the claimed 93,173 attendance is closer to 78,000");
+    items.push("⏱️ The shortest WrestleMania main event ever: Brock Lesnar vs Goldberg at WM33, just 4 minutes 45 seconds");
+    items.push("📐 Steamboat and Savage rehearsed their WrestleMania III match move-for-move for weeks; it became the modern blueprint");
+    items.push("💻 Built with ~1,200 lines of code in one session");
+    items.push("🚀 From zero to launch in under 12 hours");
+    items.push("🦆 A group of ducks is called a paddling");
+    items.push("🦆 Ducks can sleep with one eye open");
+    items.push("❤️ Thanks for playing, you're the real main event");
+
+    if (!subs.length) return items;
 
     const sorted = [...subs].sort((a,b) => a.ts - b.ts);
-    if (sorted.length) items.push(`⚡ First to lock in: ${sorted[0].name}`);
-    if (sorted.length > 1) items.push(`🐢 Last to finish their card: ${sorted[sorted.length-1].name}`);
-
-    // Fastest submission (shortest time between first and last sub is tricky,
-    // so we show the earliest timestamp as "fastest")
     if (sorted.length) {
       const fastest = sorted[0];
       const d = new Date(fastest.ts);
       items.push(`🏃 Fastest submission: ${fastest.name} at ${d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`);
+      items.push(`⚡ First to lock in: ${sorted[0].name}`);
     }
+    if (sorted.length > 1) items.push(`🐢 Last to finish their card: ${sorted[sorted.length-1].name}`);
+
+    if (sorted.length > 1) {
+      const span = sorted[sorted.length-1].ts - sorted[0].ts;
+      const hours = Math.floor(span / 3600000);
+      const mins = Math.floor((span % 3600000) / 60000);
+      if (hours > 0) items.push(`⏳ First and last submissions were ${hours}h ${mins}m apart`);
+      else if (mins > 0) items.push(`⏳ First and last submissions were ${mins} minutes apart`);
+    }
+
+    const recent = subs.filter(s => s.ts > Date.now() - 3600000).length;
+    if (recent > 0) items.push(`📅 ${recent} player${recent===1?"":"s"} submitted in the last hour`);
 
     const byRecent = [...subs].sort((a,b) => b.ts - a.ts);
     if (byRecent.length > 1 && byRecent[0].ts !== sorted[sorted.length-1].ts) {
@@ -713,7 +787,13 @@ function TriviaTicker({ subs }) {
       items.push(`🔮 Most surprise guesses: ${mostSurprises[0].name} (${(mostSurprises[0].surprises||[]).filter(Boolean).length})`);
     }
 
-    // Most against the grain — person whose picks match the group majority the least
+    const maxed = subs.filter(s => (s.surprises||[]).filter(Boolean).length === SURPRISE_SLOTS).length;
+    if (maxed > 0) items.push(`🔮 ${maxed} player${maxed===1?"":"s"} filled all ${SURPRISE_SLOTS} surprise slots`);
+
+    const allBonusIds = allBonuses.map(b => b.id);
+    const fullCard = subs.filter(s => allBonusIds.every(bid => s.bonuses?.[bid])).length;
+    if (fullCard > 0) items.push(`✅ ${fullCard} of ${subs.length} player${subs.length===1?"":"s"} answered every bonus question`);
+
     if (subs.length >= 3) {
       const conformity = subs.map(sub => {
         let agrees = 0;
@@ -727,28 +807,113 @@ function TriviaTicker({ subs }) {
         });
         return { name: sub.name, agrees };
       });
-      const rebel = conformity.sort((a,b) => a.agrees - b.agrees)[0];
+      const rebel = [...conformity].sort((a,b) => a.agrees - b.agrees)[0];
+      const sheep = [...conformity].sort((a,b) => b.agrees - a.agrees)[0];
       if (rebel) items.push(`🐺 Most against the grain: ${rebel.name}`);
+      if (sheep) items.push(`🐑 Most aligned with the group: ${sheep.name}`);
+
+      const underdog = subs.map(sub => {
+        let underdogPicks = 0;
+        matches.forEach(m => {
+          const pick = sub.picks?.[m.id];
+          if (!pick) return;
+          const counts = {};
+          subs.forEach(s => { const p = s.picks?.[m.id]; if (p) counts[p] = (counts[p]||0)+1; });
+          const lowest = Object.entries(counts).sort((a,b) => a[1] - b[1])[0]?.[0];
+          if (pick === lowest && counts[lowest] === 1) underdogPicks++;
+        });
+        return { name: sub.name, underdogPicks };
+      }).sort((a,b) => b.underdogPicks - a.underdogPicks)[0];
+      if (underdog && underdog.underdogPicks > 0) items.push(`🐕 Underdog whisperer: ${underdog.name}`);
+
+      const matchConsensus = matches.map(m => {
+        const counts = {};
+        subs.forEach(s => { const p = s.picks?.[m.id]; if (p) counts[p] = (counts[p]||0)+1; });
+        const top = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+        if (!top) return null;
+        const total = Object.values(counts).reduce((a,b)=>a+b,0);
+        return { match: matchShorthands[m.id] || m.title, name: top[0], count: top[1], total, pct: total ? top[1]/total : 0 };
+      }).filter(Boolean);
+      const mostAgreed = [...matchConsensus].sort((a,b) => b.pct - a.pct)[0];
+      if (mostAgreed && mostAgreed.pct > 0.5) {
+        items.push(`🎯 ${mostAgreed.count}/${mostAgreed.total} players have ${mostAgreed.name} winning ${mostAgreed.match}`);
+      }
+      const mostDivisive = [...matchConsensus].sort((a,b) => a.pct - b.pct)[0];
+      if (mostDivisive && mostDivisive.pct < 0.7) {
+        items.push(`⚖️ ${mostDivisive.match} is the most divisive pick of the weekend`);
+      }
     }
 
-    const totalPicks = subs.reduce((a,s) => a + Object.keys(s.picks||{}).filter(k=>s.picks[k]).length, 0);
-    items.push(`📊 ${totalPicks} total match picks across ${subs.length} players`);
+    const surpriseCounts = {};
+    subs.forEach(s => (s.surprises||[]).filter(Boolean).forEach(g => {
+      const key = g.trim();
+      if (key) surpriseCounts[key] = (surpriseCounts[key]||0) + 1;
+    }));
+    const topSurprise = Object.entries(surpriseCounts).sort((a,b) => b[1]-a[1])[0];
+    if (topSurprise && topSurprise[1] > 1) {
+      items.push(`🎤 ${topSurprise[0]} has been picked as a possible surprise by ${topSurprise[1]} players`);
+    }
+
     if (subs.length >= 3) items.push(`🏟️ ${subs.length} competitors entered the ring`);
 
-    // Surprise names as ticker items
     const nameSet = new Set();
     subs.forEach(s => (s.surprises||[]).filter(Boolean).forEach(g => nameSet.add(g.trim())));
     nameSet.forEach(name => items.push(`🎤 ${name} was selected as a surprise return / debut`));
 
-    // Meta facts
-    items.push("💻 Built with ~1,200 lines of code in one session");
-    items.push("🚀 From zero to launch in under 12 hours");
-    items.push("🦆 A group of ducks is called a paddling");
-    items.push("🦆 Ducks can sleep with one eye open");
-    items.push("❤️ Thanks for playing, you're the real main event");
+    if (results?.picks && Object.values(results.picks).filter(Boolean).length > 0) {
+      if (results.lastPickId && results.picks[results.lastPickId]) {
+        const m = matches.find(mm => mm.id === results.lastPickId);
+        if (m) {
+          const shorthand = matchShorthands[m.id] || m.title;
+          items.push(`📣 Latest result: ${shorthand} — ${results.picks[m.id]} wins!`);
+        }
+      }
+
+      const scores = subs.map(s => calcScore(s, results)).filter(s => s !== null);
+      if (scores.length) {
+        const avg = Math.round(scores.reduce((a,b)=>a+b,0) / scores.length);
+        items.push(`📊 Average score so far: ${avg} / ${maxScore()}`);
+      }
+
+      const upsets = matches.map(m => {
+        const winner = results.picks[m.id];
+        if (!winner) return null;
+        const counts = {};
+        subs.forEach(s => { const p = s.picks?.[m.id]; if (p) counts[p] = (counts[p]||0)+1; });
+        const total = Object.values(counts).reduce((a,b)=>a+b,0);
+        if (!total) return null;
+        const winnerCount = counts[winner] || 0;
+        return { match: matchShorthands[m.id] || m.title, winner, pct: winnerCount/total };
+      }).filter(Boolean).sort((a,b) => a.pct - b.pct);
+      if (upsets[0] && upsets[0].pct < 0.5) {
+        items.push(`🎢 Biggest upset so far: ${upsets[0].winner} winning ${upsets[0].match}`);
+      }
+
+      const streaks = subs.map(sub => {
+        let longest = 0, current = 0;
+        matches.forEach(m => {
+          const winner = results.picks[m.id];
+          if (!winner) { current = 0; return; }
+          if (sub.picks?.[m.id] === winner) {
+            current++;
+            if (current > longest) longest = current;
+          } else current = 0;
+        });
+        return { name: sub.name, streak: longest };
+      }).sort((a,b) => b.streak - a.streak);
+      if (streaks[0] && streaks[0].streak >= 3) {
+        items.push(`🔥 Hot streak: ${streaks[0].name} on ${streaks[0].streak} correct picks in a row`);
+      }
+    }
 
     return items;
   })();
+}
+
+function TriviaTicker({ subs, results }) {
+  const [idx, setIdx] = useState(0);
+  const shuffledRef = useRef([]);
+  const facts = useTriviaFacts(subs, results);
 
   // Shuffle once when fact list changes, then cycle through
   useEffect(() => {
@@ -855,16 +1020,18 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
 
       {/* Sub-tabs */}
       <div style={{ display:"flex", border:`1px solid ${BORDER}`, borderRadius:8, overflow:"hidden", marginBottom:18 }}>
-        {[["leaders","🏅 Leaderboard"],["breakdown","📊 Breakdown"]].map(([id,label])=>(
-          <button key={id} onClick={()=>setView(id)} style={{ flex:1, padding:"14px", fontSize:14, letterSpacing:"0.08em", textTransform:"uppercase", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", background:view===id?`${GOLD}18`:"transparent", color:view===id?GOLD:"#6a6060", borderRight:id==="leaders"?`1px solid rgba(255,255,255,0.06)`:"none" }}>{label}</button>
+        {[["leaders","🏅 Board"],["breakdown","📊 Breakdown"],["trivia","🎯 Trivia"]].map(([id,label],i,arr)=>(
+          <button key={id} onClick={()=>setView(id)} style={{ flex:1, padding:"14px 4px", fontSize:13, letterSpacing:"0.08em", textTransform:"uppercase", border:"none", cursor:"pointer", fontFamily:"Georgia, serif", background:view===id?`${GOLD}18`:"transparent", color:view===id?GOLD:"#6a6060", borderRight:i<arr.length-1?`1px solid rgba(255,255,255,0.06)`:"none" }}>{label}</button>
         ))}
       </div>
 
-      <TriviaTicker subs={subs} />
+      {view !== "trivia" && <TriviaTicker subs={subs} results={results} />}
 
-      {subs.length===0&&!loading&&(
+      {subs.length===0&&!loading&&view!=="trivia"&&(
         <div style={{ textAlign:"center", padding:"40px 0", color:"#5a5050", fontSize:16 }}>No submissions yet 🎤</div>
       )}
+
+      {view === "trivia" && <TriviaCards subs={subs} results={results} />}
 
       {/* Slammy Awards — show on both views when results exist */}
       {slammys && resolvedCount > 0 && (
