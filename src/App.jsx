@@ -709,7 +709,46 @@ function LockedStep() {
 function TriviaCards({ subs, results }) {
   const [idx, setIdx] = useState(0);
   const shuffledRef = useRef([]);
+  const timerRef = useRef(null);
   const facts = useTriviaFacts(subs, results);
+
+  function reshuffle() {
+    const reshuffled = [...shuffledRef.current];
+    for (let k = reshuffled.length - 1; k > 0; k--) {
+      const j = Math.floor(Math.random() * (k + 1));
+      [reshuffled[k], reshuffled[j]] = [reshuffled[j], reshuffled[k]];
+    }
+    shuffledRef.current = reshuffled;
+  }
+
+  function goNext() {
+    setIdx(i => {
+      const next = i + 1;
+      if (next >= shuffledRef.current.length) { reshuffle(); return 0; }
+      return next;
+    });
+    restartTimer();
+  }
+
+  function goPrev() {
+    setIdx(i => {
+      const prev = i - 1;
+      if (prev < 0) return shuffledRef.current.length - 1;
+      return prev;
+    });
+    restartTimer();
+  }
+
+  function restartTimer() {
+    clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setIdx(i => {
+        const next = i + 1;
+        if (next >= shuffledRef.current.length) { reshuffle(); return 0; }
+        return next;
+      });
+    }, 6000);
+  }
 
   // Shuffle once when fact list changes; exhaust before reshuffling
   useEffect(() => {
@@ -724,54 +763,53 @@ function TriviaCards({ subs, results }) {
 
   useEffect(() => {
     if (shuffledRef.current.length <= 1) return;
-    const timer = setInterval(() => {
-      setIdx(i => {
-        const next = i + 1;
-        // When we exhaust the list, reshuffle and start over
-        if (next >= shuffledRef.current.length) {
-          const reshuffled = [...shuffledRef.current];
-          for (let k = reshuffled.length - 1; k > 0; k--) {
-            const j = Math.floor(Math.random() * (k + 1));
-            [reshuffled[k], reshuffled[j]] = [reshuffled[j], reshuffled[k]];
-          }
-          shuffledRef.current = reshuffled;
-          return 0;
-        }
-        return next;
-      });
-    }, 6000);
-    return () => clearInterval(timer);
+    restartTimer();
+    return () => clearInterval(timerRef.current);
   }, [facts.length]);
 
   if (!shuffledRef.current.length) return null;
   const current = shuffledRef.current[idx % shuffledRef.current.length] || "";
 
+  const arrowBtn = {
+    background:"rgba(155,89,182,0.1)",
+    border:`1px solid ${PURPLE}40`,
+    color:PURPLE,
+    width:42, height:42, borderRadius:21,
+    cursor:"pointer", fontSize:20, fontFamily:"Georgia, serif",
+    display:"flex", alignItems:"center", justifyContent:"center",
+    padding:0, lineHeight:1,
+    flexShrink:0,
+  };
+
   return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"30px 8px" }}>
       <div style={{ ...S.lbl, color:PURPLE, marginBottom:18 }}>Trivia & Stats</div>
-      <div key={idx} style={{
-        background:"linear-gradient(135deg,rgba(155,89,182,0.08),rgba(200,160,40,0.05))",
-        border:`1px solid ${PURPLE}40`,
-        borderRadius:18,
-        padding:"32px 24px",
-        textAlign:"center",
-        maxWidth:480,
-        width:"100%",
-        minHeight:160,
-        display:"flex",
-        alignItems:"center",
-        justifyContent:"center",
-        animation:"cardFlip 6s ease",
-        boxShadow:`0 8px 32px rgba(155,89,182,0.1)`,
-      }}>
-        <div style={{ fontSize:18, color:"#f5efe5", lineHeight:1.5, fontFamily:"Georgia, serif" }}>{current}</div>
+      <div style={{ display:"flex", alignItems:"center", gap:10, width:"100%", maxWidth:540 }}>
+        <button onClick={goPrev} aria-label="Previous fact" style={arrowBtn}>←</button>
+        <div key={idx} style={{
+          flex:1,
+          background:"linear-gradient(135deg,rgba(155,89,182,0.08),rgba(200,160,40,0.05))",
+          border:`1px solid ${PURPLE}40`,
+          borderRadius:18,
+          padding:"32px 24px",
+          textAlign:"center",
+          minHeight:160,
+          display:"flex",
+          alignItems:"center",
+          justifyContent:"center",
+          animation:"cardFlip 6s ease",
+          boxShadow:`0 8px 32px rgba(155,89,182,0.1)`,
+        }}>
+          <div style={{ fontSize:18, color:"#f5efe5", lineHeight:1.5, fontFamily:"Georgia, serif" }}>{current}</div>
+        </div>
+        <button onClick={goNext} aria-label="Next fact" style={arrowBtn}>→</button>
       </div>
       <div style={{ display:"flex", gap:6, marginTop:18 }}>
         {facts.slice(0, Math.min(facts.length, 12)).map((_, i) => (
           <div key={i} style={{ width: i === (idx % facts.length) ? 18 : 6, height:6, borderRadius:3, background: i === (idx % facts.length) ? GOLD : "rgba(255,255,255,0.15)", transition:"all 0.4s" }} />
         ))}
       </div>
-      <div style={{ fontSize:11, color:"#6a6060", marginTop:14 }}>{facts.length} facts in rotation · auto advances</div>
+      <div style={{ fontSize:11, color:"#6a6060", marginTop:14 }}>{facts.length} facts in rotation · tap arrows or wait</div>
       <style>{`@keyframes cardFlip { 0% { opacity:0; transform:translateY(12px) scale(0.96); } 12% { opacity:1; transform:translateY(0) scale(1); } 88% { opacity:1; transform:translateY(0) scale(1); } 100% { opacity:0; transform:translateY(-12px) scale(0.96); } }`}</style>
     </div>
   );
