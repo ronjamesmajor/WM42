@@ -227,7 +227,32 @@ export default function WM42() {
       loadShared(PICKS_KEY, []),
       loadShared(RESULTS_KEY, null),
     ]);
-    setSubs(fetchedSubs);
+
+    // ── Migration: rewrite old end-bonus format to new shorthand ──
+    // Old: "${m.title} — ${competitors.join(" vs ")}"
+    // New: matchShorthands[m.id]
+    const oldToNew = {};
+    matches.forEach(m => {
+      const oldLabel = `${m.title} — ${m.competitors.map(c=>c.name).join(" vs ")}`;
+      oldToNew[oldLabel] = matchShorthands[m.id] || m.title;
+    });
+    let migrated = false;
+    const cleanedSubs = fetchedSubs.map(sub => {
+      const eb = sub.endBonuses || {};
+      const newEb = {};
+      let changed = false;
+      Object.entries(eb).forEach(([k, v]) => {
+        if (v && oldToNew[v]) { newEb[k] = oldToNew[v]; changed = true; }
+        else newEb[k] = v;
+      });
+      if (changed) { migrated = true; return { ...sub, endBonuses: newEb }; }
+      return sub;
+    });
+    if (migrated) {
+      await saveShared(PICKS_KEY, cleanedSubs);
+    }
+
+    setSubs(cleanedSubs);
     setResults(fetchedRes);
     setLastRefresh(new Date());
     setLoading(false);
