@@ -706,36 +706,39 @@ function LockedStep() {
 }
 
 // ─── BOARD TAB ───────────────────────────────────────────────────────────────
-function TriviaCards({ subs, results }) {
-  const [idx, setIdx] = useState(0);
-  const shuffledRef = useRef([]);
-  const timerRef = useRef(null);
-  const facts = useTriviaFacts(subs, results);
-
-  function reshuffle() {
-    const reshuffled = [...shuffledRef.current];
-    for (let k = reshuffled.length - 1; k > 0; k--) {
-      const j = Math.floor(Math.random() * (k + 1));
-      [reshuffled[k], reshuffled[j]] = [reshuffled[j], reshuffled[k]];
-    }
-    shuffledRef.current = reshuffled;
+function shuffleArray(arr) {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
   }
+  return out;
+}
+
+function TriviaCards({ subs, results }) {
+  const facts = useTriviaFacts(subs, results);
+  // Lazy init: shuffled list is ready on the very first render
+  const [shuffled, setShuffled] = useState(() => shuffleArray(facts));
+  const [idx, setIdx] = useState(0);
+  const timerRef = useRef(null);
+
+  // Reshuffle when fact list length changes (new player joins, etc.)
+  useEffect(() => {
+    setShuffled(shuffleArray(facts));
+    setIdx(0);
+  }, [facts.length]);
 
   function goNext() {
     setIdx(i => {
       const next = i + 1;
-      if (next >= shuffledRef.current.length) { reshuffle(); return 0; }
+      if (next >= shuffled.length) { setShuffled(shuffleArray(shuffled)); return 0; }
       return next;
     });
     restartTimer();
   }
 
   function goPrev() {
-    setIdx(i => {
-      const prev = i - 1;
-      if (prev < 0) return shuffledRef.current.length - 1;
-      return prev;
-    });
+    setIdx(i => i - 1 < 0 ? shuffled.length - 1 : i - 1);
     restartTimer();
   }
 
@@ -744,31 +747,20 @@ function TriviaCards({ subs, results }) {
     timerRef.current = setInterval(() => {
       setIdx(i => {
         const next = i + 1;
-        if (next >= shuffledRef.current.length) { reshuffle(); return 0; }
+        if (next >= shuffled.length) { setShuffled(shuffleArray(shuffled)); return 0; }
         return next;
       });
     }, 6000);
   }
 
-  // Shuffle once when fact list changes; exhaust before reshuffling
   useEffect(() => {
-    const shuffled = [...facts];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    shuffledRef.current = shuffled;
-    setIdx(0);
-  }, [facts.length]);
-
-  useEffect(() => {
-    if (shuffledRef.current.length <= 1) return;
+    if (shuffled.length <= 1) return;
     restartTimer();
     return () => clearInterval(timerRef.current);
-  }, [facts.length]);
+  }, [shuffled.length]);
 
-  if (!shuffledRef.current.length) return null;
-  const current = shuffledRef.current[idx % shuffledRef.current.length] || "";
+  if (!shuffled.length) return null;
+  const current = shuffled[idx % shuffled.length] || "";
 
   const arrowBtn = (side) => ({
     position:"absolute",
@@ -1002,45 +994,36 @@ function useTriviaFacts(subs, results) {
 }
 
 function TriviaTicker({ subs, results }) {
-  const [idx, setIdx] = useState(0);
-  const shuffledRef = useRef([]);
   const allFacts = useTriviaFacts(subs, results);
-  // Slim ticker only uses single-line facts
   const facts = allFacts.filter(f => f.length <= 70);
+  const [shuffled, setShuffled] = useState(() => shuffleArray(facts));
+  const [idx, setIdx] = useState(0);
+  const shuffledRef = useRef(shuffled);
+  shuffledRef.current = shuffled;
 
-  // Shuffle once when fact list changes, then cycle through
+  // Reshuffle when fact list length changes
   useEffect(() => {
-    const shuffled = [...facts];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    shuffledRef.current = shuffled;
+    setShuffled(shuffleArray(facts));
     setIdx(0);
   }, [facts.length]);
 
   useEffect(() => {
-    if (shuffledRef.current.length <= 1) return;
+    if (shuffled.length <= 1) return;
     const timer = setInterval(() => {
       setIdx(i => {
         const next = i + 1;
         if (next >= shuffledRef.current.length) {
-          const reshuffled = [...shuffledRef.current];
-          for (let k = reshuffled.length - 1; k > 0; k--) {
-            const j = Math.floor(Math.random() * (k + 1));
-            [reshuffled[k], reshuffled[j]] = [reshuffled[j], reshuffled[k]];
-          }
-          shuffledRef.current = reshuffled;
+          setShuffled(shuffleArray(shuffledRef.current));
           return 0;
         }
         return next;
       });
     }, 5000);
     return () => clearInterval(timer);
-  }, [facts.length]);
+  }, [shuffled.length]);
 
-  if (!shuffledRef.current.length) return null;
-  const current = shuffledRef.current[idx % shuffledRef.current.length] || "";
+  if (!shuffled.length) return null;
+  const current = shuffled[idx % shuffled.length] || "";
 
   return (
     <div style={{ overflow:"hidden", height:28, marginBottom:14, position:"relative" }}>
