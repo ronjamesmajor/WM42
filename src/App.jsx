@@ -323,10 +323,15 @@ export default function WM42() {
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100vh", background:"radial-gradient(ellipse at 20% 10%, #1a1228 0%, #0c0b12 55%, #0f0d18 100%)", color:"#f5efe5", fontFamily:"Georgia, serif", overflow:"hidden" }}>
       {/* Header */}
-      <div style={{ flexShrink:0, textAlign:"center", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.3)", overflow:"hidden" }}>
+      <div style={{ flexShrink:0, textAlign:"center", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.3)", overflow:"hidden", position:"relative" }}>
         <img src="./guesslemania2.png" alt="Guesslemania 2026" style={{ width:"100%", objectFit:"contain", display:"block" }} />
+        <button onClick={() => fetchBoard()} aria-label="Refresh" style={{ position:"absolute", top:8, right:8, width:34, height:34, borderRadius:17, background:"rgba(0,0,0,0.55)", border:`1px solid ${GOLD}50`, color:GOLD, cursor:"pointer", fontSize:16, fontFamily:"Georgia, serif", display:"flex", alignItems:"center", justifyContent:"center", padding:0, lineHeight:1 }}>↻</button>
         <div style={{ padding:"8px 16px 10px", background:"linear-gradient(180deg, rgba(12,11,18,0.9) 0%, rgba(12,11,18,0.6) 100%)", marginTop:-1 }}>
-          <div style={{ fontSize:12, letterSpacing:"0.15em", color:"#908878", textTransform:"uppercase" }}>April 18–19 · Allegiant Stadium · Las Vegas · Max {maxScore()} pts</div>
+          <div style={{ fontSize:12, letterSpacing:"0.12em", color:"#908878", textTransform:"uppercase" }}>
+            {subs.length > 0
+              ? `${subs.length} player${subs.length===1?"":"s"} · ${Object.values(results?.picks||{}).filter(Boolean).length}/${matches.length} results · Max ${maxScore()} pts`
+              : `April 18–19 · Allegiant Stadium · Max ${maxScore()} pts`}
+          </div>
         </div>
       </div>
       {/* Progress */}
@@ -822,11 +827,6 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
           <div style={{ fontSize:11, color:"#6a6060", marginTop:4 }}>Trophy revealed when Admin marks the show complete</div>
         </div>
       )}
-
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-        <div style={{ fontSize:14, color:"#908878" }}>{subs.length} submission{subs.length!==1?"s":""} · {resolvedCount}/{matches.length} results{lastRefresh?` · ${lastRefresh.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`:""}</div>
-        <button onClick={onRefresh} style={{ background:"transparent", border:`1px solid ${GOLD}35`, borderRadius:10, color:GOLD, cursor:"pointer", fontSize:14, padding:"10px 18px", fontFamily:"Georgia, serif" }}>{loading?"…":"↻"}</button>
-      </div>
 
       {/* Sub-tabs */}
       <div style={{ display:"flex", border:`1px solid ${BORDER}`, borderRadius:8, overflow:"hidden", marginBottom:18 }}>
