@@ -56,6 +56,12 @@ button:active {
   opacity: 0.85;
 }
 
+/* Focus rings for accessibility */
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid #c8a028;
+  outline-offset: 2px;
+}
+
 /* Smooth select styling */
 select {
   appearance: none;

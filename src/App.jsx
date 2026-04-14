@@ -198,7 +198,7 @@ function calcScore(sub, results) {
 const S = {
   input: { width:"100%", boxSizing:"border-box", background:"rgba(255,255,255,0.06)", border:`1px solid ${GOLD}35`, borderRadius:10, color:"#f5efe5", fontSize:17, padding:"15px 18px", outline:"none", fontFamily:"Georgia, serif" },
   btn: (color=GOLD, disabled=false) => ({ background:disabled?"rgba(255,255,255,0.04)":`linear-gradient(135deg,${color}cc,${color})`, border:"none", borderRadius:10, color:disabled?"#6a6060":(color===GOLD?"#0c0b12":"#fff"), cursor:disabled?"not-allowed":"pointer", fontSize:15, fontWeight:700, letterSpacing:"0.1em", padding:"16px 30px", textTransform:"uppercase", fontFamily:"Georgia, serif", transition:"all 0.15s" }),
-  card: { background:"rgba(255,255,255,0.025)", border:`1px solid rgba(255,255,255,0.06)`, borderRadius:14, padding:"18px 18px", marginBottom:16 },
+  card: { background:"rgba(255,255,255,0.025)", border:`1px solid rgba(255,255,255,0.06)`, borderRadius:14, padding:"18px 18px", marginBottom:18 },
   lbl:  { fontSize:13, letterSpacing:"0.18em", color:GOLD, textTransform:"uppercase", marginBottom:12 },
   ptsBadge: (pts, color) => ({ fontSize:12, letterSpacing:"0.05em", color:color||GOLD, background:`${color||GOLD}15`, padding:"4px 10px", borderRadius:6, fontWeight:700, whiteSpace:"nowrap" }),
 };
@@ -385,7 +385,7 @@ export default function WM42() {
       {/* Header */}
       <div style={{ flexShrink:0, textAlign:"center", borderBottom:"1px solid rgba(200,160,40,0.12)", background:"rgba(0,0,0,0.3)", overflow:"hidden", position:"relative" }}>
         <img src="./guesslemania2.png" alt="Guesslemania 2026" onClick={handleHeroTap} style={{ width:"100%", objectFit:"contain", display:"block", cursor:"pointer" }} />
-        <button onClick={() => fetchBoard()} aria-label="Refresh" style={{ position:"absolute", top:8, right:8, width:34, height:34, borderRadius:17, background:"rgba(0,0,0,0.55)", border:`1px solid ${GOLD}50`, color:GOLD, cursor:"pointer", fontSize:16, fontFamily:"Georgia, serif", display:"flex", alignItems:"center", justifyContent:"center", padding:0, lineHeight:1 }}>↻</button>
+        <button onClick={() => fetchBoard()} aria-label="Refresh" style={{ position:"absolute", top:8, right:8, width:44, height:44, borderRadius:22, background:"rgba(0,0,0,0.55)", border:`1px solid ${GOLD}50`, color:GOLD, cursor:"pointer", fontSize:18, fontFamily:"Georgia, serif", display:"flex", alignItems:"center", justifyContent:"center", padding:0, lineHeight:1 }}>↻</button>
         <div style={{ padding:"8px 16px 10px", background:"linear-gradient(180deg, rgba(12,11,18,0.9) 0%, rgba(12,11,18,0.6) 100%)", marginTop:-1 }}>
           <div style={{ fontSize:12, letterSpacing:"0.12em", color:"#908878", textTransform:"uppercase" }}>
             {subs.length > 0
@@ -467,7 +467,7 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
       <input style={{ ...S.input, maxWidth:300, textAlign:"center", margin:"0 auto 14px", display:"block", letterSpacing:"0.15em", fontSize:18, fontWeight:700 }} placeholder="Enter your key" value={keyInput} onChange={e=>setKeyInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&keyInput&&handleKeySubmit()} maxLength={22} />
       {error && <div style={{ color:RED, fontSize:11, marginBottom:10 }}>{error}</div>}
       <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
-        <button style={{ background:"transparent", border:`1px solid rgba(255,255,255,0.09)`, borderRadius:4, color:"#908878", cursor:"pointer", fontSize:11, padding:"10px 18px", fontFamily:"Georgia, serif" }} onClick={()=>{ setPhase("name"); setKeyInput(""); setError(""); }}>← Back</button>
+        <button style={{ background:"transparent", border:`1px solid rgba(255,255,255,0.09)`, borderRadius:8, color:"#908878", cursor:"pointer", fontSize:13, padding:"14px 20px", fontFamily:"Georgia, serif" }} onClick={()=>{ setPhase("name"); setKeyInput(""); setError(""); }}>← Back</button>
         <button style={S.btn(GOLD,!keyInput)} disabled={!keyInput} onClick={handleKeySubmit}>Verify →</button>
       </div>
     </div>
@@ -479,7 +479,7 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
       <h2 style={{ color:GOLD, margin:"0 0 4px", fontSize:19 }}>WrestleMania 42 Pick 'Em</h2>
       <p style={{ color:"#8a8070", fontSize:12, marginBottom:16, lineHeight:1.5 }}>Pick your winners · scores update live during the show</p>
       <div style={{ background:`${GOLD}10`, border:`1px solid ${GOLD}40`, borderRadius:10, padding:"12px 16px", margin:"0 auto 18px", maxWidth:340, textAlign:"center" }}>
-        <div style={{ fontSize:11, color:GOLD, letterSpacing:"0.15em", textTransform:"uppercase", marginBottom:5 }}>🔒 Lockout</div>
+        <div style={{ fontSize:13, color:GOLD, letterSpacing:"0.15em", textTransform:"uppercase", marginBottom:5 }}>🔒 Lockout</div>
         <div style={{ fontSize:13, color:"#f5efe5", lineHeight:1.45 }}>Edit picks anytime before the show. Picks lock at:</div>
         <div style={{ fontSize:14, fontWeight:700, color:GOLD, marginTop:5 }}>{LOCKOUT_UTC.toLocaleString([], { weekday:"long", month:"long", day:"numeric", hour:"numeric", minute:"2-digit", hour12:true, timeZoneName:"short" })}</div>
       </div>
@@ -495,7 +495,7 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
           <div key={label} style={{ background:BG, border:`1px solid ${BORDER}`, borderRadius:6, padding:"8px 10px", textAlign:"center", minWidth:90, flex:1 }}>
             <div style={{ fontSize:16, marginBottom:2 }}>{icon}</div>
             <div style={{ fontSize:11, color:"#f5efe5" }}>{label}</div>
-            <div style={{ fontSize:9, color:"#908878", marginTop:1 }}>{sub}</div>
+            <div style={{ fontSize:11, color:"#908878", marginTop:1 }}>{sub}</div>
           </div>
         ))}
       </div>
@@ -508,7 +508,7 @@ function NameStep({ name, setName, onNewUser, onReturningUser }) {
 function BonusQuestion({ bonus, value, onChange }) {
   if (bonus.type === "yesno") {
     return (
-      <div style={{ display:"flex", gap:8 }}>
+      <div style={{ display:"flex", gap:10 }}>
         {["Yes","No"].map(opt => {
           const sel = value === opt;
           return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, background:sel?`${PURPLE}18`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}70`:`1px solid rgba(255,255,255,0.06)`, borderRadius:10, padding:"14px", color:sel?"#f5efe5":"#8a8070", cursor:"pointer", fontSize:15, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:5 }}>✓</span>}</button>;
@@ -518,7 +518,7 @@ function BonusQuestion({ bonus, value, onChange }) {
   }
   if (bonus.type === "overunder") {
     return (
-      <div style={{ display:"flex", gap:10 }}>
+      <div style={{ display:"flex", gap:12 }}>
         {["Over","Under"].map(opt => {
           const sel = value === opt;
           return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, background:sel?`${PURPLE}18`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}70`:`1px solid rgba(255,255,255,0.06)`, borderRadius:10, padding:"14px", color:sel?"#f5efe5":"#8a8070", cursor:"pointer", fontSize:15, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:5 }}>✓</span>}</button>;
@@ -528,7 +528,7 @@ function BonusQuestion({ bonus, value, onChange }) {
   }
   if (bonus.type === "select") {
     return (
-      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+      <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
         {bonus.options.map(opt => {
           const sel = value === opt;
           return <button key={opt} onClick={() => onChange(value === opt ? undefined : opt)} style={{ flex:1, minWidth:85, background:sel?`${PURPLE}18`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${PURPLE}70`:`1px solid rgba(255,255,255,0.06)`, borderRadius:10, padding:"12px 14px", color:sel?"#f5efe5":"#8a8070", cursor:"pointer", fontSize:14, fontFamily:"Georgia, serif" }}>{opt}{sel&&<span style={{ color:PURPLE, marginLeft:4 }}>✓</span>}</button>;
@@ -570,11 +570,11 @@ function MatchStep({ night, picks, setPicks, bonusPicks, setBonusPicks, onBack, 
           </div>
           {/* Winner pick */}
           <div style={{ fontSize:12, color:"#908878", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.1em" }}>Winner · {MATCH_PTS} pts</div>
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
             {m.competitors.map(c=>{
               const sel=picks[m.id]===c.name;
               return (
-                <button key={c.name} onClick={()=>setPicks(p=>({...p,[m.id]:p[m.id]===c.name?undefined:c.name}))} style={{ flex:1, minWidth:120, background:sel?`${GOLD}15`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}70`:`1px solid rgba(255,255,255,0.06)`, borderRadius:10, padding:"14px 16px", color:sel?"#f5efe5":"#8a8070", cursor:"pointer", textAlign:"left", fontFamily:"Georgia, serif", transition:"all 0.15s" }}>
+                <button key={c.name} onClick={()=>setPicks(p=>({...p,[m.id]:p[m.id]===c.name?undefined:c.name}))} style={{ flex:1, minWidth:120, background:sel?`${GOLD}15`:"rgba(255,255,255,0.03)", border:sel?`1px solid ${GOLD}70`:`1px solid rgba(255,255,255,0.06)`, borderRadius:10, padding:"14px 16px", color:sel?"#f5efe5":"#8a8070", cursor:"pointer", textAlign:"left", fontFamily:"Georgia, serif", transition:"all 0.15s", wordBreak:"break-word" }}>
                   <div style={{ fontSize:16, fontWeight:sel?700:400, lineHeight:1.3 }}>{c.name}</div>
                   {c.role && <div style={{ fontSize:12, color:sel?GOLD:"#6a6060", marginTop:4 }}>{c.role}{sel&&<span style={{ color:GOLD, marginLeft:5 }}>✓</span>}</div>}
                   {!c.role && sel && <div style={{ fontSize:12, color:GOLD, marginTop:4 }}>✓</div>}
@@ -584,7 +584,7 @@ function MatchStep({ night, picks, setPicks, bonusPicks, setBonusPicks, onBack, 
           </div>
           {/* Inline bonuses */}
           {(m.bonuses||[]).map(b=>(
-            <div key={b.id} style={{ marginTop:14, padding:"14px 16px", background:"rgba(155,89,182,0.05)", border:`1px solid ${PURPLE}25`, borderRadius:10 }}>
+            <div key={b.id} style={{ marginTop:16, padding:"14px 16px", background:"rgba(155,89,182,0.05)", border:`1px solid ${PURPLE}25`, borderRadius:10 }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                 <div style={{ fontSize:14, color:"#e0d4b8" }}>{b.label}</div>
                 <div style={{ ...S.ptsBadge(BONUS_PTS, PURPLE) }}>{BONUS_PTS} pts</div>
@@ -1120,7 +1120,7 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
         <div style={{ background:"rgba(0,0,0,0.3)", border:`1px solid rgba(255,255,255,0.06)`, borderRadius:8, padding:"14px 16px", textAlign:"center", marginBottom:14 }}>
           <div style={{ fontSize:36, marginBottom:4, filter:"brightness(0.3) blur(1px)" }}>🏆</div>
           <div style={{ fontSize:10, letterSpacing:"0.2em", color:"#6a6060", textTransform:"uppercase", marginBottom:4 }}>Currently Leading</div>
-          <div style={{ fontSize:18, fontWeight:700, color:"#e0d4b8", filter:"blur(10px)", userSelect:"none", WebkitUserSelect:"none" }}>{scored[0]?.name}</div>
+          <div style={{ fontSize:Math.max(13, 18 - Math.max(0, (scored[0]?.name||"").length - 12) * 0.4), fontWeight:700, color:"#e0d4b8", filter:"blur(10px)", userSelect:"none", WebkitUserSelect:"none" }}>{scored[0]?.name}</div>
           <div style={{ fontSize:11, color:"#6a6060", marginTop:4 }}>Trophy revealed when Admin marks the show complete</div>
         </div>
       )}
@@ -1166,8 +1166,8 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
         return (
           <div key={s.name+s.ts} style={{ ...S.card, borderColor:isFirst&&gameOver?`${GOLD}70`:BORDER, display:"flex", alignItems:"center", gap:14, padding:"18px 16px" }}>
             <div style={{ fontSize:i<3?28:16, minWidth:34, textAlign:"center", color:i>=3?"#6a6060":undefined }}>{i<3?medals[i]:`#${i+1}`}</div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:18, fontWeight:700, color:isFirst&&gameOver?GOLD:"#f5efe5" }}>{s.name}</div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:Math.max(13, 18 - Math.max(0, s.name.length - 12) * 0.4), fontWeight:700, color:isFirst&&gameOver?GOLD:"#f5efe5" }}>{s.name}</div>
               <div style={{ fontSize:11, color:"#6a6060", marginTop:3 }}>{new Date(s.ts).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
             </div>
             {s.score!==null ? (
