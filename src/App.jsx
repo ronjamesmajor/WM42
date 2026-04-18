@@ -1390,6 +1390,45 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
   );
 }
 
+function AdminSurpriseInput({ index, remoteValue, onCommit }) {
+  const [val, setVal] = useState(remoteValue);
+  const editingRef = useRef(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (!editingRef.current) setVal(remoteValue);
+  }, [remoteValue]);
+
+  function handleChange(e) {
+    const next = e.target.value;
+    editingRef.current = true;
+    setVal(next);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      onCommit(index, next);
+      editingRef.current = false;
+    }, 500);
+  }
+
+  function handleBlur() {
+    clearTimeout(timerRef.current);
+    if (editingRef.current) {
+      onCommit(index, val);
+      editingRef.current = false;
+    }
+  }
+
+  return (
+    <input
+      style={{ ...S.input, marginBottom:8, fontSize:16 }}
+      placeholder={`Surprise #${index+1}`}
+      value={val}
+      onChange={handleChange}
+      onBlur={handleBlur}
+    />
+  );
+}
+
 // ─── ADMIN TAB ───────────────────────────────────────────────────────────────
 function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, onClear, results, subs }) {
   if (!unlocked) return (
@@ -1416,13 +1455,14 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
   function toggleEnd(ebId, val) {
     onUpdate({ endBonuses: { [ebId]: curEnd[ebId] === val ? null : val } });
   }
-  const surpriseTimer = useRef(null);
-  function updateSurprise(index, value) {
-    const updated = [...(curSurp.length ? curSurp : Array(ADMIN_SURPRISE_SLOTS).fill(""))];
+  const curSurpRef = useRef(curSurp);
+  curSurpRef.current = curSurp;
+  function commitSurprise(index, value) {
+    const base = curSurpRef.current;
+    const updated = [...(base.length ? base : Array(ADMIN_SURPRISE_SLOTS).fill(""))];
     while (updated.length < ADMIN_SURPRISE_SLOTS) updated.push("");
     updated[index] = value;
-    clearTimeout(surpriseTimer.current);
-    surpriseTimer.current = setTimeout(() => onUpdate({ surprises: updated }), 500);
+    onUpdate({ surprises: updated });
   }
 
   return (
@@ -1490,7 +1530,7 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
       <div style={S.card}>
         <div style={{ fontSize:14, letterSpacing:"0.18em", color:GOLD, textTransform:"uppercase", marginBottom:14 }}>Confirmed Surprise Appearances</div>
         {Array.from({ length: ADMIN_SURPRISE_SLOTS }).map((_, i) => (
-          <input key={i} style={{ ...S.input, marginBottom:8, fontSize:16 }} placeholder={`Surprise #${i+1}`} value={curSurp[i] || ""} onChange={e => updateSurprise(i, e.target.value)} />
+          <AdminSurpriseInput key={i} index={i} remoteValue={curSurp[i] || ""} onCommit={commitSurprise} />
         ))}
         <div style={{ fontSize:12, color:"#8a8070", marginTop:4 }}>Auto-saves after typing · up to {ADMIN_SURPRISE_SLOTS} entries</div>
         <div style={{ fontSize:11, color:"#6a6060", marginTop:6, lineHeight:1.5 }}>Separate aliases with <code style={{ color:GOLD }}>|</code> — e.g. <code style={{ color:"#b8a888" }}>Kevin Owens|KO</code>. Typos and capitalization are auto-forgiven.</div>
