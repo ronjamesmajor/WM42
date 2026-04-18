@@ -162,6 +162,53 @@ function maxScore() {
   return matchMax + bonusMax + endMax + surpriseMax;
 }
 
+function normalizeName(s) {
+  return (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function parseActualVariants(actual) {
+  return (actual || "").split("|").map(normalizeName).filter(Boolean);
+}
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = new Array(b.length + 1);
+  let curr = new Array(b.length + 1);
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[b.length];
+}
+function fuzzyThreshold(len) {
+  if (len <= 4) return 0;
+  if (len <= 7) return 1;
+  if (len <= 11) return 2;
+  return 3;
+}
+function matchesSurprise(guess, variants) {
+  const g = normalizeName(guess);
+  if (!g) return false;
+  for (const v of variants) {
+    if (!v) continue;
+    if (g === v) return true;
+    const threshold = fuzzyThreshold(Math.min(g.length, v.length));
+    if (threshold > 0 && levenshtein(g, v) <= threshold) return true;
+  }
+  return false;
+}
+
 function calcScore(sub, results) {
   if (!results?.picks) return null;
   let s = 0;
@@ -183,11 +230,11 @@ function calcScore(sub, results) {
     if (actual && guess && actual === guess) s += BONUS_PTS;
   });
   // Surprise guesses: +2 per correct, −2 per wrong
-  const actuals = (results.surprises || []).map(n => n.trim().toLowerCase()).filter(Boolean);
+  const variants = (results.surprises || []).flatMap(parseActualVariants);
   const guesses = (sub.surprises || []).filter(Boolean);
-  if (actuals.length > 0) {
+  if (variants.length > 0) {
     guesses.forEach(g => {
-      if (actuals.includes(g.trim().toLowerCase())) s += SURPRISE_PTS;
+      if (matchesSurprise(g, variants)) s += SURPRISE_PTS;
       else s -= SURPRISE_PTS;
     });
   }
@@ -1053,8 +1100,91 @@ function TriviaTicker({ subs, results }) {
   );
 }
 
+function PlayerDetail({ sub, results, onBack }) {
+  const score = calcScore(sub, results);
+  const variants = (results?.surprises || []).flatMap(parseActualVariants);
+  const resolvedAny = !!results?.picks && Object.values(results.picks).some(Boolean);
+
+  const PickRow = ({ label, value, actual, col=GOLD, indent=false }) => {
+    if (!value) return null;
+    const correct = actual && value === actual;
+    const wrong = actual && value !== actual;
+    return (
+      <div style={{ display:"flex", justifyContent:"space-between", padding: indent ? "6px 0 6px 14px" : "8px 0", borderBottom:`1px solid rgba(255,255,255,0.04)`, fontSize: indent ? 12 : 13, gap:8 }}>
+        <span style={{ color: indent ? "#6a6060" : "#8a8070", flex:1, minWidth:0 }}>{indent && "↳ "}{label}</span>
+        <span style={{ color: correct ? "#6aff6a" : wrong ? RED : col, fontWeight:700, textAlign:"right" }}>
+          {correct && "✓ "}{wrong && "✗ "}{value}
+        </span>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <button onClick={onBack} style={{ background:"transparent", border:`1px solid ${GOLD}40`, borderRadius:6, color:GOLD, cursor:"pointer", fontSize:12, letterSpacing:"0.1em", padding:"10px 16px", textTransform:"uppercase", fontFamily:"Georgia, serif", marginBottom:14 }}>← Back to Leaders</button>
+
+      <div style={{ ...S.card, borderColor:`${GOLD}40`, textAlign:"center" }}>
+        <div style={{ fontSize:10, letterSpacing:"0.2em", color:GOLD, textTransform:"uppercase", marginBottom:6 }}>Locked Card</div>
+        <div style={{ fontSize:Math.max(16, 24 - Math.max(0, sub.name.length - 12) * 0.5), fontWeight:900, color:"#f5efe5" }}>{sub.name}</div>
+        <div style={{ fontSize:11, color:"#6a6060", marginTop:6 }}>Locked in {new Date(sub.ts).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+        {score !== null && (
+          <div style={{ marginTop:12 }}>
+            <div style={{ fontSize:32, fontWeight:900, color:"#e0d4b8", lineHeight:1 }}>{score}</div>
+            <div style={{ fontSize:11, color:"#6a6060" }}>/ {maxScore()} pts</div>
+          </div>
+        )}
+      </div>
+
+      <div style={S.card}>
+        <div style={S.lbl}>Match Picks + Bonuses</div>
+        {matches.map(m => {
+          const pick = sub.picks?.[m.id];
+          const bonuses = (m.bonuses || []).filter(b => sub.bonuses?.[b.id]);
+          if (!pick && !bonuses.length) return null;
+          return (
+            <div key={m.id}>
+              <PickRow label={m.title} value={pick} actual={results?.picks?.[m.id]} />
+              {bonuses.map(b => (
+                <PickRow key={b.id} label={b.label} value={sub.bonuses?.[b.id]} actual={results?.bonuses?.[b.id]} col={PURPLE} indent />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
+      {endBonuses.some(eb => sub.endBonuses?.[eb.id]) && (
+        <div style={S.card}>
+          <div style={S.lbl}>End Bonuses</div>
+          {endBonuses.map(eb => (
+            <PickRow key={eb.id} label={eb.label} value={sub.endBonuses?.[eb.id]} actual={results?.endBonuses?.[eb.id]} col={PURPLE} />
+          ))}
+        </div>
+      )}
+
+      {(sub.surprises || []).filter(Boolean).length > 0 && (
+        <div style={S.card}>
+          <div style={S.lbl}>Surprise Guesses</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+            {sub.surprises.filter(Boolean).map((g, i) => {
+              const correct = variants.length > 0 && matchesSurprise(g, variants);
+              const showCorrect = resolvedAny && correct;
+              return (
+                <div key={i} style={{ background: showCorrect ? "rgba(106,255,106,0.1)" : `${PURPLE}15`, border:`1px solid ${showCorrect ? "rgba(106,255,106,0.3)" : PURPLE+"40"}`, borderRadius:6, padding:"6px 10px", fontSize:13, color: showCorrect ? "#6aff6a" : "#e0d4b8" }}>
+                  {showCorrect && "✓ "}{g}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
   const [view, setView] = useState("leaders");
+  const [viewingPlayer, setViewingPlayer] = useState(null);
+  const locked = isLocked();
   const gameOver = results?.gameOver || false;
   const resolvedCount = Object.values(results?.picks||{}).filter(Boolean).length;
   const scored = [...subs].map(s=>({ ...s, score:calcScore(s,results) })).sort((a,b)=>(b.score??-1)-(a.score??-1));
@@ -1064,13 +1194,12 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
   // Slammy Award calculations
   const slammys = (() => {
     if (!results?.picks || !subs.length) return null;
-    const actuals = results.surprises || [];
-    const actualSet = actuals.map(n=>n.trim().toLowerCase()).filter(Boolean);
+    const variants = (results.surprises || []).flatMap(parseActualVariants);
 
     const stats = subs.map(sub => {
       const matchCorrect = matches.filter(m => results.picks[m.id] && sub.picks?.[m.id] === results.picks[m.id]).length;
       const bonusCorrect = allBonuses.filter(b => results.bonuses?.[b.id] && sub.bonuses?.[b.id] === results.bonuses[b.id]).length;
-      const surpriseCorrect = actualSet.length > 0 ? (sub.surprises||[]).filter(g => g && actualSet.includes(g.trim().toLowerCase())).length : 0;
+      const surpriseCorrect = variants.length > 0 ? (sub.surprises||[]).filter(g => g && matchesSurprise(g, variants)).length : 0;
       return { name: sub.name, matchCorrect, bonusCorrect, surpriseCorrect };
     });
 
@@ -1085,7 +1214,7 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
       { emoji:"📖", title:"Booker Man", sub:"Most correct match picks", winners: best("matchCorrect") },
       { emoji:"👑", title:"Draft King", sub:"Most bonus questions correct", winners: best("bonusCorrect") },
       { emoji:"📺", title:"Doesn't Watch the Product", sub:"Fewest correct match picks", winners: best("matchCorrect","asc") },
-      { emoji:"🔮", title:"Fantasy Booker", sub:"Most surprise guesses correct", winners: actualSet.length > 0 ? best("surpriseCorrect") : null },
+      { emoji:"🔮", title:"Fantasy Booker", sub:"Most surprise guesses correct", winners: variants.length > 0 ? best("surpriseCorrect") : null },
     ];
   })();
 
@@ -1099,6 +1228,11 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
       <div style={{ height:"100%", width:`${pct}%`, background:isWinner?`linear-gradient(90deg,#3a8a3a,#6aff6a)`:`linear-gradient(90deg,${col}70,${col})`, borderRadius:3, transition:"width 0.5s ease" }} />
     </div>
   );
+
+  if (viewingPlayer && locked) {
+    const fresh = subs.find(s => s.name === viewingPlayer.name && s.ts === viewingPlayer.ts) || viewingPlayer;
+    return <PlayerDetail sub={fresh} results={results} onBack={() => setViewingPlayer(null)} />;
+  }
 
   return (
     <div>
@@ -1164,7 +1298,14 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
         const isFirst = i===0 && s.score!==null && s.score>0;
         const medals = ["🥇","🥈","🥉"];
         return (
-          <div key={s.name+s.ts} style={{ ...S.card, borderColor:isFirst&&gameOver?`${GOLD}70`:BORDER, display:"flex", alignItems:"center", gap:14, padding:"18px 16px" }}>
+          <div
+            key={s.name+s.ts}
+            onClick={locked ? () => setViewingPlayer(s) : undefined}
+            role={locked ? "button" : undefined}
+            tabIndex={locked ? 0 : undefined}
+            onKeyDown={locked ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setViewingPlayer(s); } }) : undefined}
+            style={{ ...S.card, borderColor:isFirst&&gameOver?`${GOLD}70`:BORDER, display:"flex", alignItems:"center", gap:14, padding:"18px 16px", cursor: locked ? "pointer" : "default" }}
+          >
             <div style={{ fontSize:i<3?28:16, minWidth:34, textAlign:"center", color:i>=3?"#6a6060":undefined }}>{i<3?medals[i]:`#${i+1}`}</div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:Math.max(13, 18 - Math.max(0, s.name.length - 12) * 0.4), fontWeight:700, color:isFirst&&gameOver?GOLD:"#f5efe5" }}>{s.name}</div>
@@ -1176,6 +1317,7 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
                 <div style={{ fontSize:11, color:"#6a6060" }}>/ {maxScore()}</div>
               </div>
             ) : <div style={{ fontSize:13, color:"#6a6060" }}>Pending</div>}
+            {locked && <div style={{ fontSize:18, color:"#6a6060", marginLeft:4 }}>›</div>}
           </div>
         );
       })}
@@ -1198,13 +1340,19 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
               <div style={{ fontSize:12, letterSpacing:"0.12em", color:PURPLE, textTransform:"uppercase", marginBottom:10, position:"relative" }}>{m.title}</div>
               {m.competitors.map(c=>{
                 const p=pct(m.id,c.name); const isW=results?.picks?.[m.id]===c.name;
+                const pickers = locked ? subs.filter(s => s.picks?.[m.id] === c.name).map(s => s.name) : [];
                 return (
-                  <div key={c.name} style={{ marginBottom:8 }}>
+                  <div key={c.name} style={{ marginBottom:10 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3, gap:6 }}>
                       <span style={{ fontSize:14, color:isW?"#6aff6a":"#d4c8ac", flex:1 }}>{c.name}{isW&&" ✓"}</span>
                       <span style={{ fontSize:14, fontWeight:700, color:GOLD }}>{p}%</span>
                     </div>
                     <Bar pct={p} col={GOLD} isWinner={isW} />
+                    {pickers.length > 0 && (
+                      <div style={{ fontSize:11, color:"#8a8070", fontStyle:"italic", marginTop:5, lineHeight:1.45, wordBreak:"break-word" }}>
+                        {pickers.join(", ")}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1345,6 +1493,7 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
           <input key={i} style={{ ...S.input, marginBottom:8, fontSize:16 }} placeholder={`Surprise #${i+1}`} value={curSurp[i] || ""} onChange={e => updateSurprise(i, e.target.value)} />
         ))}
         <div style={{ fontSize:12, color:"#8a8070", marginTop:4 }}>Auto-saves after typing · up to {ADMIN_SURPRISE_SLOTS} entries</div>
+        <div style={{ fontSize:11, color:"#6a6060", marginTop:6, lineHeight:1.5 }}>Separate aliases with <code style={{ color:GOLD }}>|</code> — e.g. <code style={{ color:"#b8a888" }}>Kevin Owens|KO</code>. Typos and capitalization are auto-forgiven.</div>
       </div>
 
       <div style={{ marginTop:10, textAlign:"center" }}>
