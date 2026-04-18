@@ -22,11 +22,11 @@ const matches = [
   // Main Card
   { id:"m10", night:1, title:"WWE Women's Tag Team Championship", note:"Fatal 4-Way", belt:"./belts/WWE_Women's_Tag_Team_Championship.png", competitors:[
     { name:"Bayley & Lyra Valkyria",        role:"" },
-    { name:"The Bella Twins",               role:"" },
+    { name:"Brie Bella & SURPRISE",         role:"" },
     { name:"Nia Jax & Lash Legend",         role:"Champions" },
     { name:"Alexa Bliss & Charlotte Flair", role:"" },
   ], bonuses:[
-    { id:"b_m10_a", label:"Who gets the pin?", type:"select", options:["Bayley","Lyra Valkyria","Nikki Bella","Brie Bella","Nia Jax","Lash Legend","Alexa Bliss","Charlotte Flair"] },
+    { id:"b_m10_a", label:"Who gets the pin?", type:"select", options:["Bayley","Lyra Valkyria","Nikki Bella","Brie Bella","Paige","Nia Jax","Lash Legend","Alexa Bliss","Charlotte Flair"] },
   ]},
   { id:"m6",  night:1, title:"WWE Women's Intercontinental Championship", belt:"./belts/WWE_Women's_Intercontinental_Championship.png", competitors:[
     { name:"Becky Lynch", role:"Challenger" },
@@ -101,6 +101,17 @@ const matches = [
 
 // All bonuses flattened for scoring
 const allBonuses = matches.flatMap(m => (m.bonuses || []).map(b => ({ ...b, matchId: m.id })));
+
+// Bonus answer aliases: pairs of values that score as equivalent for a given bonus
+const BONUS_EQUIV = {
+  "b_m10_a": [["Paige", "Nikki Bella"]], // Paige subbed in for Nikki Bella
+};
+function bonusAnswersMatch(bonusId, actual, guess) {
+  if (!actual || !guess) return false;
+  if (actual === guess) return true;
+  const pairs = BONUS_EQUIV[bonusId] || [];
+  return pairs.some(([a, b]) => (actual === a && guess === b) || (actual === b && guess === a));
+}
 
 // ─── END BONUSES ─────────────────────────────────────────────────────────────
 const matchShorthands = {
@@ -221,7 +232,7 @@ function calcScore(sub, results) {
   allBonuses.forEach(b => {
     const actual = results.bonuses?.[b.id];
     const guess  = sub.bonuses?.[b.id];
-    if (actual && guess && actual === guess) s += BONUS_PTS;
+    if (bonusAnswersMatch(b.id, actual, guess)) s += BONUS_PTS;
   });
   // End bonuses — 2 pts each
   endBonuses.forEach(eb => {
@@ -229,15 +240,14 @@ function calcScore(sub, results) {
     const guess  = sub.endBonuses?.[eb.id];
     if (actual && guess && actual === guess) s += BONUS_PTS;
   });
-  // Surprise guesses: +2 per correct, −2 per wrong
+  // Surprise guesses: +2 per correct (as soon as confirmed),
+  // −2 per wrong only once the show is marked complete (blank = 0)
   const variants = (results.surprises || []).flatMap(parseActualVariants);
   const guesses = (sub.surprises || []).filter(Boolean);
-  if (variants.length > 0) {
-    guesses.forEach(g => {
-      if (matchesSurprise(g, variants)) s += SURPRISE_PTS;
-      else s -= SURPRISE_PTS;
-    });
-  }
+  guesses.forEach(g => {
+    if (matchesSurprise(g, variants)) s += SURPRISE_PTS;
+    else if (results.gameOver) s -= SURPRISE_PTS;
+  });
   return s;
 }
 
@@ -1105,10 +1115,10 @@ function PlayerDetail({ sub, results, onBack }) {
   const variants = (results?.surprises || []).flatMap(parseActualVariants);
   const resolvedAny = !!results?.picks && Object.values(results.picks).some(Boolean);
 
-  const PickRow = ({ label, value, actual, col=GOLD, indent=false }) => {
+  const PickRow = ({ label, value, actual, col=GOLD, indent=false, bonusId=null }) => {
     if (!value) return null;
-    const correct = actual && value === actual;
-    const wrong = actual && value !== actual;
+    const correct = actual && (bonusId ? bonusAnswersMatch(bonusId, actual, value) : value === actual);
+    const wrong = actual && !correct;
     return (
       <div style={{ display:"flex", justifyContent:"space-between", padding: indent ? "6px 0 6px 14px" : "8px 0", borderBottom:`1px solid rgba(255,255,255,0.04)`, fontSize: indent ? 12 : 13, gap:8 }}>
         <span style={{ color: indent ? "#6a6060" : "#8a8070", flex:1, minWidth:0 }}>{indent && "↳ "}{label}</span>
@@ -1145,7 +1155,7 @@ function PlayerDetail({ sub, results, onBack }) {
             <div key={m.id}>
               <PickRow label={m.title} value={pick} actual={results?.picks?.[m.id]} />
               {bonuses.map(b => (
-                <PickRow key={b.id} label={b.label} value={sub.bonuses?.[b.id]} actual={results?.bonuses?.[b.id]} col={PURPLE} indent />
+                <PickRow key={b.id} label={b.label} value={sub.bonuses?.[b.id]} actual={results?.bonuses?.[b.id]} col={PURPLE} indent bonusId={b.id} />
               ))}
             </div>
           );
@@ -1198,7 +1208,7 @@ function BoardTab({ subs, results, loading, lastRefresh, onRefresh }) {
 
     const stats = subs.map(sub => {
       const matchCorrect = matches.filter(m => results.picks[m.id] && sub.picks?.[m.id] === results.picks[m.id]).length;
-      const bonusCorrect = allBonuses.filter(b => results.bonuses?.[b.id] && sub.bonuses?.[b.id] === results.bonuses[b.id]).length;
+      const bonusCorrect = allBonuses.filter(b => bonusAnswersMatch(b.id, results.bonuses?.[b.id], sub.bonuses?.[b.id])).length;
       const surpriseCorrect = variants.length > 0 ? (sub.surprises||[]).filter(g => g && matchesSurprise(g, variants)).length : 0;
       return { name: sub.name, matchCorrect, bonusCorrect, surpriseCorrect };
     });
