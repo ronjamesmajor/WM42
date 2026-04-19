@@ -84,7 +84,7 @@ const matches = [
   ], bonuses:[
     { id:"b_m2_a", label:"Match length?", type:"overunder", line:"O/U 19 minutes" },
   ]},
-  { id:"m13", night:2, title:"Singles Match", competitors:[
+  { id:"m13", night:2, title:"Street Fight", competitors:[
     { name:"Demon Finn Bálor",  role:"" },
     { name:"Dominik Mysterio",  role:"" },
   ], bonuses:[
