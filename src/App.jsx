@@ -241,11 +241,14 @@ function calcScore(sub, results) {
     if (actual && guess && actual === guess) s += BONUS_PTS;
   });
   // Surprise guesses: +2 per correct (as soon as confirmed),
+  // 0 if name was advertised/disqualified (doesn't qualify as a surprise),
   // −2 per wrong only once the show is marked complete (blank = 0)
   const variants = (results.surprises || []).flatMap(parseActualVariants);
+  const disqualified = (results.disqualified || []).flatMap(parseActualVariants);
   const guesses = (sub.surprises || []).filter(Boolean);
   guesses.forEach(g => {
     if (matchesSurprise(g, variants)) s += SURPRISE_PTS;
+    else if (matchesSurprise(g, disqualified)) return; // advertised: 0 points
     else if (results.gameOver) s -= SURPRISE_PTS;
   });
   return s;
@@ -1113,6 +1116,7 @@ function TriviaTicker({ subs, results }) {
 function PlayerDetail({ sub, results, onBack }) {
   const score = calcScore(sub, results);
   const variants = (results?.surprises || []).flatMap(parseActualVariants);
+  const disqVariants = (results?.disqualified || []).flatMap(parseActualVariants);
   const resolvedAny = !!results?.picks && Object.values(results.picks).some(Boolean);
 
   const PickRow = ({ label, value, actual, col=GOLD, indent=false, bonusId=null }) => {
@@ -1177,9 +1181,13 @@ function PlayerDetail({ sub, results, onBack }) {
           <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
             {sub.surprises.filter(Boolean).map((g, i) => {
               const correct = variants.length > 0 && matchesSurprise(g, variants);
+              const isDisq = !correct && disqVariants.length > 0 && matchesSurprise(g, disqVariants);
               const showCorrect = resolvedAny && correct;
+              const bg = showCorrect ? "rgba(106,255,106,0.1)" : isDisq ? "rgba(255,255,255,0.03)" : `${PURPLE}15`;
+              const border = showCorrect ? "rgba(106,255,106,0.3)" : isDisq ? "rgba(255,255,255,0.08)" : PURPLE+"40";
+              const color = showCorrect ? "#6aff6a" : isDisq ? "#6a6060" : "#e0d4b8";
               return (
-                <div key={i} style={{ background: showCorrect ? "rgba(106,255,106,0.1)" : `${PURPLE}15`, border:`1px solid ${showCorrect ? "rgba(106,255,106,0.3)" : PURPLE+"40"}`, borderRadius:6, padding:"6px 10px", fontSize:13, color: showCorrect ? "#6aff6a" : "#e0d4b8" }}>
+                <div key={i} title={isDisq ? "Advertised talent — doesn't qualify as a surprise" : undefined} style={{ background: bg, border:`1px solid ${border}`, borderRadius:6, padding:"6px 10px", fontSize:13, color, textDecoration: isDisq ? "line-through" : "none" }}>
                   {showCorrect && "✓ "}{g}
                 </div>
               );
@@ -1455,6 +1463,7 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
   const curBonuses = results?.bonuses || {};
   const curEnd     = results?.endBonuses || {};
   const curSurp    = results?.surprises || [];
+  const curDisq    = results?.disqualified || [];
 
   function togglePick(matchId, name) {
     onUpdate({ picks: { [matchId]: curPicks[matchId] === name ? null : name } });
@@ -1473,6 +1482,15 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
     while (updated.length < ADMIN_SURPRISE_SLOTS) updated.push("");
     updated[index] = value;
     onUpdate({ surprises: updated });
+  }
+  const curDisqRef = useRef(curDisq);
+  curDisqRef.current = curDisq;
+  function commitDisqualified(index, value) {
+    const base = curDisqRef.current;
+    const updated = [...(base.length ? base : Array(ADMIN_SURPRISE_SLOTS).fill(""))];
+    while (updated.length < ADMIN_SURPRISE_SLOTS) updated.push("");
+    updated[index] = value;
+    onUpdate({ disqualified: updated });
   }
 
   return (
@@ -1544,6 +1562,16 @@ function AdminTab({ unlocked, setUnlocked, pass, setPass, onUpdate, onMarkDone, 
         ))}
         <div style={{ fontSize:12, color:"#8a8070", marginTop:4 }}>Auto-saves after typing · up to {ADMIN_SURPRISE_SLOTS} entries</div>
         <div style={{ fontSize:11, color:"#6a6060", marginTop:6, lineHeight:1.5 }}>Separate aliases with <code style={{ color:GOLD }}>|</code> — e.g. <code style={{ color:"#b8a888" }}>Kevin Owens|KO</code>. Typos and capitalization are auto-forgiven.</div>
+      </div>
+
+      {/* Disqualified / Advertised Guesses */}
+      <div style={S.card}>
+        <div style={{ fontSize:14, letterSpacing:"0.18em", color:PURPLE, textTransform:"uppercase", marginBottom:6 }}>Disqualified / Advertised</div>
+        <div style={{ fontSize:12, color:"#8a8070", marginBottom:12, lineHeight:1.5 }}>Names entered here score <strong style={{ color:"#e0d4b8" }}>0</strong> (not −2) even after show is marked complete — use for advertised talent that doesn't qualify as a surprise (Cena, Jelly Roll, Lil Yachty, etc.).</div>
+        {Array.from({ length: ADMIN_SURPRISE_SLOTS }).map((_, i) => (
+          <AdminSurpriseInput key={i} index={i} remoteValue={curDisq[i] || ""} onCommit={commitDisqualified} />
+        ))}
+        <div style={{ fontSize:11, color:"#6a6060", marginTop:6, lineHeight:1.5 }}>Same alias rules (<code style={{ color:PURPLE }}>|</code> separator) and fuzzy matching apply.</div>
       </div>
 
       <div style={{ marginTop:10, textAlign:"center" }}>
