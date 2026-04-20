@@ -1183,13 +1183,14 @@ function PlayerDetail({ sub, results, onBack }) {
             {sub.surprises.filter(Boolean).map((g, i) => {
               const correct = variants.length > 0 && matchesSurprise(g, variants);
               const isDisq = !correct && disqVariants.length > 0 && matchesSurprise(g, disqVariants);
+              const isWrong = !correct && !isDisq && !!results?.gameOver;
               const showCorrect = resolvedAny && correct;
-              const bg = showCorrect ? "rgba(106,255,106,0.1)" : isDisq ? "rgba(255,255,255,0.03)" : `${PURPLE}15`;
-              const border = showCorrect ? "rgba(106,255,106,0.3)" : isDisq ? "rgba(255,255,255,0.08)" : PURPLE+"40";
-              const color = showCorrect ? "#6aff6a" : isDisq ? "#6a6060" : "#e0d4b8";
+              const bg = showCorrect ? "rgba(106,255,106,0.1)" : isWrong ? `${RED}15` : isDisq ? "rgba(255,255,255,0.03)" : `${PURPLE}15`;
+              const border = showCorrect ? "rgba(106,255,106,0.3)" : isWrong ? `${RED}60` : isDisq ? "rgba(255,255,255,0.08)" : PURPLE+"40";
+              const color = showCorrect ? "#6aff6a" : isWrong ? "#ff8a80" : isDisq ? "#6a6060" : "#e0d4b8";
               return (
-                <div key={i} title={isDisq ? "Advertised talent — doesn't qualify as a surprise" : undefined} style={{ background: bg, border:`1px solid ${border}`, borderRadius:6, padding:"6px 10px", fontSize:13, color, textDecoration: isDisq ? "line-through" : "none" }}>
-                  {showCorrect && "✓ "}{g}
+                <div key={i} title={isDisq ? "Advertised talent — doesn't qualify as a surprise" : isWrong ? "Didn't appear — −2 pts" : undefined} style={{ background: bg, border:`1px solid ${border}`, borderRadius:6, padding:"6px 10px", fontSize:13, color, textDecoration: isDisq ? "line-through" : "none" }}>
+                  {showCorrect && "✓ "}{isWrong && "✗ "}{g}
                 </div>
               );
             })}
